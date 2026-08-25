@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h1>Tu biblioteca</h1>
+  <p>Busca por título, autor, código de barras o ubicación.</p>
+</div>
+
+<form class="search-card" hx-get="{{ url_for('search') }}" hx-target="#results" hx-trigger="input changed delay:300ms from:input, change from:select">
+  <span class="search-icon">🔍</span>
+  <input type="text" name="q" placeholder="Buscar..." autofocus>
+  <select name="field">
+    <option value="todo">Todo</option>
+    <option value="titulo">Título</option>
+    <option value="autor">Autor</option>
+    <option value="isbn">Código de barras</option>
+    <option value="ubicacion">Ubicación</option>
+  </select>
+</form>
+
+<div id="results" hx-get="{{ url_for('search') }}" hx-trigger="load">
+  <div class="empty-state pulse"><div class="icon">📖</div><p>Cargando tu biblioteca...</p></div>
+</div>
+{% endblock %}

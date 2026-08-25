@@ -1,0 +1,12 @@
+services:
+  biblioteca:
+    build: .
+    container_name: biblioteca_personal
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - biblioteca_data:/data
+
+volumes:
+  biblioteca_data:

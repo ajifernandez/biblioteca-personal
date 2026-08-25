@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}Biblioteca personal{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+</head>
+<body>
+  <div class="topnav">
+    <a class="brand" href="{{ url_for('index') }}"><span class="logo-emoji">📚</span> Mi Biblioteca</a>
+    <a class="btn btn-primary" id="nav-add-btn" href="{{ url_for('scan') }}" aria-label="Añadir libro">＋<span class="btn-label"> Añadir libro</span></a>
+  </div>
+  <div class="page">
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

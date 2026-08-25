@@ -1,0 +1,51 @@
+{% set open_entry = history|selectattr('status', 'equalto', 'leyendo')|selectattr('finished_at', 'equalto', None)|first %}
+
+<div class="card">
+  {% if not open_entry %}
+    <form hx-post="{{ url_for('add_history', book_id=book.id) }}" hx-target="#history" hx-swap="innerHTML">
+      <input type="hidden" name="status" value="leyendo">
+      <button type="submit" class="btn btn-primary btn-block">📖 Empezar a leer</button>
+    </form>
+  {% else %}
+    <form hx-post="{{ url_for('add_history', book_id=book.id) }}" hx-target="#history" hx-swap="innerHTML">
+      <input type="hidden" name="status" value="leido">
+      <div class="form-grid">
+        <div class="field">
+          <label>Valoración</label>
+          <select name="rating">
+            <option value="">Sin valorar</option>
+            {% for n in range(1,6) %}<option value="{{ n }}">{{ '⭐' * n }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field full">
+          <label>Notas</label>
+          <textarea name="notes" rows="2" placeholder="¿Qué te ha parecido?"></textarea>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">✅ Marcar como leído</button>
+    </form>
+  {% endif %}
+</div>
+
+{% if not history %}
+  <div class="empty-state">
+    <div class="icon">🕰️</div>
+    <p>Sin lecturas registradas todavía.</p>
+  </div>
+{% else %}
+  <div class="timeline">
+    {% for entry in history %}
+      <div class="timeline-entry {{ 'reading' if entry.status == 'leyendo' }}">
+        {% if entry.status == 'leido' %}
+          <div class="title">Leído</div>
+          <div class="dates">{{ entry.started_at }} → {{ entry.finished_at }}</div>
+          {% if entry.rating %}<div class="stars">{{ '⭐' * entry.rating }}</div>{% endif %}
+          {% if entry.notes %}<div class="notes">{{ entry.notes }}</div>{% endif %}
+        {% else %}
+          <div class="title">Leyendo</div>
+          <div class="dates">Empezado el {{ entry.started_at }}</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}

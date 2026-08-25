@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="hero">
+  {% if book.cover_url %}
+    <img class="book-cover-lg" src="{{ book.cover_url }}" alt="">
+  {% else %}
+    <div class="book-cover-lg" style="display:flex;align-items:center;justify-content:center;font-size:2.5rem;background:linear-gradient(135deg, var(--primary-soft), var(--border));">📕</div>
+  {% endif %}
+  <div>
+    <h1>{{ book.title }}</h1>
+    <p class="author-line">{{ book.author or "Autor desconocido" }}{% if book.published_year %} · {{ book.published_year }}{% endif %}</p>
+    {% if book.publisher %}<p class="author-line">{{ book.publisher }}</p>{% endif %}
+    <div>
+      {% if book.location %}<span class="tag">📍 {{ book.location }}</span>{% endif %}
+      {% if book.isbn %}<span class="tag">{{ book.isbn }}</span>{% endif %}
+    </div>
+  </div>
+</div>
+
+<details class="editor">
+  <summary>Editar datos</summary>
+  <form class="card" method="post" action="{{ url_for('update_book', book_id=book.id) }}">
+    <div class="form-grid">
+      <div class="field full">
+        <label>Título</label>
+        <input type="text" name="title" value="{{ book.title }}" required>
+      </div>
+      <div class="field">
+        <label>Autor</label>
+        <input type="text" name="author" value="{{ book.author or '' }}">
+      </div>
+      <div class="field">
+        <label>Editorial</label>
+        <input type="text" name="publisher" value="{{ book.publisher or '' }}">
+      </div>
+      <div class="field">
+        <label>Año</label>
+        <input type="text" name="published_year" value="{{ book.published_year or '' }}">
+      </div>
+      <div class="field">
+        <label>Ubicación</label>
+        <input type="text" name="location" value="{{ book.location or '' }}">
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+  </form>
+</details>
+
+<form method="post" action="{{ url_for('delete_book', book_id=book.id) }}" onsubmit="return confirm('¿Eliminar este libro?');" style="margin-bottom: 1.5rem;">
+  <button type="submit" class="btn btn-danger">🗑 Eliminar libro</button>
+</form>
+
+<h2 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">Historial de lectura</h2>
+<div id="history">
+  {% include "partials/_history.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% if not books %}
+  <div class="empty-state">
+    <div class="icon">🔎</div>
+    <p><strong>No hay libros que coincidan.</strong></p>
+    <p>Prueba otra búsqueda o <a href="{{ url_for('scan') }}">añade un libro nuevo</a>.</p>
+  </div>
+{% else %}
+  <div class="book-grid">
+    {% for book in books %}
+      <a class="book-card" href="{{ url_for('book_detail', book_id=book.id) }}" style="animation-delay: {{ loop.index0 * 0.03 }}s">
+        {% if book.cover_url %}
+          <img class="book-cover" src="{{ book.cover_url }}" alt="">
+        {% else %}
+          <div class="book-cover" style="display:flex;align-items:center;justify-content:center;font-size:1.5rem;">📕</div>
+        {% endif %}
+        <div class="meta">
+          <h3>{{ book.title }}</h3>
+          <p class="author">{{ book.author or "Autor desconocido" }}{% if book.published_year %} · {{ book.published_year }}{% endif %}</p>
+          <div>
+            {% if book.location %}<span class="tag">📍 {{ book.location }}</span>{% endif %}
+            {% if book.isbn %}<span class="tag">{{ book.isbn }}</span>{% endif %}
+          </div>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% endif %}
