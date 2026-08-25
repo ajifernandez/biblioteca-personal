@@ -1,14 +1,35 @@
 import os
 import sqlite3
+import uuid
 from datetime import datetime
 
 import requests
-from flask import Flask, g, jsonify, redirect, render_template, request, url_for
+from flask import Flask, g, jsonify, redirect, render_template, request, send_from_directory, url_for
 
 DB_PATH = os.environ.get("DB_PATH", "/data/biblioteca.db")
 SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "schema.sql")
+UPLOAD_DIR = os.path.join(os.path.dirname(DB_PATH), "uploads")
+ALLOWED_COVER_EXT = {"jpg", "jpeg", "png", "webp", "gif"}
 
 app = Flask(__name__)
+
+
+def save_cover_upload(file_storage):
+    """Guarda la foto de portada subida y devuelve su URL, o None si no hay archivo."""
+    if not file_storage or not file_storage.filename:
+        return None
+    ext = file_storage.filename.rsplit(".", 1)[-1].lower() if "." in file_storage.filename else ""
+    if ext not in ALLOWED_COVER_EXT:
+        return None
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    file_storage.save(os.path.join(UPLOAD_DIR, filename))
+    return url_for("uploaded_cover", filename=filename)
+
+
+@app.route("/uploads/<path:filename>")
+def uploaded_cover(filename):
+    return send_from_directory(UPLOAD_DIR, filename)
 
 
 def get_db():
@@ -147,6 +168,8 @@ def create_book():
     if not title:
         return "El título es obligatorio", 400
 
+    cover_url = save_cover_upload(request.files.get("cover_file")) or request.form.get("cover_url", "").strip()
+
     cur = db.execute(
         """INSERT INTO books (isbn, title, author, publisher, published_year, cover_url, description, location)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -158,7 +181,7 @@ def create_book():
             request.form.get("author", "").strip(),
             request.form.get("publisher", "").strip(),
             request.form.get("published_year", "").strip(),
-            request.form.get("cover_url", "").strip(),
+            cover_url,
             request.form.get("description", "").strip(),
             request.form.get("location", "").strip(),
         ),
@@ -184,8 +207,18 @@ def book_detail(book_id):
 @app.route("/books/<int:book_id>", methods=["POST"])
 def update_book(book_id):
     db = get_db()
+    existing = db.execute("SELECT cover_url FROM books WHERE id = ?", (book_id,)).fetchone()
+    if not existing:
+        return "Libro no encontrado", 404
+
+    cover_url = (
+        save_cover_upload(request.files.get("cover_file"))
+        or request.form.get("cover_url", "").strip()
+        or existing["cover_url"]
+    )
+
     db.execute(
-        """UPDATE books SET title=?, author=?, publisher=?, published_year=?, location=?
+        """UPDATE books SET title=?, author=?, publisher=?, published_year=?, location=?, cover_url=?
            WHERE id=?""",
         (
             request.form.get("title", "").strip(),
@@ -193,6 +226,7 @@ def update_book(book_id):
             request.form.get("publisher", "").strip(),
             request.form.get("published_year", "").strip(),
             request.form.get("location", "").strip(),
+            cover_url,
             book_id,
         ),
     )

@@ -13,7 +13,7 @@
   <button id="restart-scan" class="btn btn-ghost" style="display:none;">🔄 Escanear otro</button>
 </div>
 
-<form id="book-form" class="card" method="post" action="{{ url_for('create_book') }}" style="display:none;">
+<form id="book-form" class="card" method="post" action="{{ url_for('create_book') }}" enctype="multipart/form-data" style="display:none;">
   <div class="form-grid">
     <div class="field full">
       <label>Código de barras (ISBN)</label>
@@ -39,8 +39,17 @@
       <label>Ubicación</label>
       <input type="text" name="location" id="f-location" placeholder="ej. Salón, estante 2">
     </div>
+    <div class="field full">
+      <label>Portada</label>
+      <div style="display:flex; gap:0.75rem; align-items:flex-start;">
+        <img id="cover-preview" alt="" style="width:60px;height:90px;object-fit:cover;border-radius:8px;background:var(--border);display:none;">
+        <div style="flex:1;">
+          <input type="file" name="cover_file" id="f-cover-file" accept="image/*" capture="environment">
+          <input type="text" name="cover_url" id="f-cover" placeholder="o pega una URL de imagen" style="margin-top:0.5rem;">
+        </div>
+      </div>
+    </div>
   </div>
-  <input type="hidden" name="cover_url" id="f-cover">
   <input type="hidden" name="description" id="f-description">
   <button type="submit" class="btn btn-primary btn-block">Guardar libro</button>
 </form>
@@ -52,6 +61,25 @@
   const status = document.getElementById("scan-status");
   const form = document.getElementById("book-form");
   const restartBtn = document.getElementById("restart-scan");
+  const coverFile = document.getElementById("f-cover-file");
+  const coverUrlInput = document.getElementById("f-cover");
+  const coverPreview = document.getElementById("cover-preview");
+
+  function showCoverPreview(src) {
+    if (src) {
+      coverPreview.src = src;
+      coverPreview.style.display = "block";
+    } else {
+      coverPreview.style.display = "none";
+    }
+  }
+
+  coverFile.addEventListener("change", () => {
+    if (coverFile.files[0]) showCoverPreview(URL.createObjectURL(coverFile.files[0]));
+  });
+  coverUrlInput.addEventListener("input", () => {
+    if (!coverFile.files[0]) showCoverPreview(coverUrlInput.value);
+  });
 
   function stopScanner() {
     reader.stop().catch(() => {});
@@ -89,6 +117,7 @@
         document.getElementById("f-year").value = data.published_year || "";
         document.getElementById("f-cover").value = data.cover_url || "";
         document.getElementById("f-description").value = data.description || "";
+        showCoverPreview(data.cover_url || "");
         status.textContent = "✅ Libro encontrado. Revisa los datos y añade la ubicación.";
       } else {
         status.textContent = "No se encontró información automática. Rellena los datos a mano.";

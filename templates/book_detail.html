@@ -19,7 +19,7 @@
 
 <details class="editor">
   <summary>Editar datos</summary>
-  <form class="card" method="post" action="{{ url_for('update_book', book_id=book.id) }}">
+  <form class="card" method="post" action="{{ url_for('update_book', book_id=book.id) }}" enctype="multipart/form-data">
     <div class="form-grid">
       <div class="field full">
         <label>Título</label>
@@ -41,9 +41,32 @@
         <label>Ubicación</label>
         <input type="text" name="location" value="{{ book.location or '' }}">
       </div>
+      <div class="field full">
+        <label>Portada</label>
+        <div style="display:flex; gap:0.75rem; align-items:flex-start;">
+          {% if book.cover_url %}
+            <img id="edit-cover-preview" src="{{ book.cover_url }}" alt="" style="width:60px;height:90px;object-fit:cover;border-radius:8px;background:var(--border);">
+          {% else %}
+            <img id="edit-cover-preview" alt="" style="width:60px;height:90px;object-fit:cover;border-radius:8px;background:var(--border);display:none;">
+          {% endif %}
+          <div style="flex:1;">
+            <input type="file" name="cover_file" id="edit-cover-file" accept="image/*" capture="environment">
+            <input type="text" name="cover_url" value="{{ book.cover_url or '' }}" placeholder="o pega una URL de imagen" style="margin-top:0.5rem;">
+          </div>
+        </div>
+      </div>
     </div>
     <button type="submit" class="btn btn-primary">Guardar cambios</button>
   </form>
+  <script>
+    document.getElementById("edit-cover-file").addEventListener("change", (e) => {
+      if (e.target.files[0]) {
+        const preview = document.getElementById("edit-cover-preview");
+        preview.src = URL.createObjectURL(e.target.files[0]);
+        preview.style.display = "block";
+      }
+    });
+  </script>
 </details>
 
 <form method="post" action="{{ url_for('delete_book', book_id=book.id) }}" onsubmit="return confirm('¿Eliminar este libro?');" style="margin-bottom: 1.5rem;">
