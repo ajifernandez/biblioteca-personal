@@ -387,6 +387,26 @@ details.editor[open] summary::before { content: '▾ '; }
 .timeline-entry .stars { color: var(--accent); letter-spacing: 1px; }
 .timeline-entry .notes { font-size: 0.88rem; margin-top: 0.3rem; color: var(--text); }
 
+.app-footer {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 1.25rem 1.5rem;
+  color: var(--text-muted);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.8rem;
+}
+
+.version-badge {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+  background: var(--bg-elevated);
+  font-weight: 600;
+}
+
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
@@ -401,6 +421,7 @@ details.editor[open] summary::before { content: '▾ '; }
 /* Responsive: móvil */
 @media (max-width: 600px) {
   .page { padding: 0 0.85rem 5rem; }
+  .app-footer { padding: 0 0.85rem 1.25rem; }
 
   .brand { font-size: 1rem; }
   .btn-label { display: none; }

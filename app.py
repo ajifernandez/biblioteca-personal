@@ -8,10 +8,30 @@ from flask import Flask, g, jsonify, redirect, render_template, request, send_fr
 
 DB_PATH = os.environ.get("DB_PATH", "/data/biblioteca.db")
 SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "schema.sql")
+VERSION_PATH = os.path.join(os.path.dirname(__file__), "VERSION")
 UPLOAD_DIR = os.path.join(os.path.dirname(DB_PATH), "uploads")
 ALLOWED_COVER_EXT = {"jpg", "jpeg", "png", "webp", "gif"}
 
+
+def load_app_version():
+    env_version = os.environ.get("APP_VERSION")
+    if env_version:
+        return env_version
+    try:
+        with open(VERSION_PATH, encoding="utf-8") as f:
+            return f.read().strip() or "dev"
+    except OSError:
+        return "dev"
+
+
+APP_VERSION = load_app_version()
+
 app = Flask(__name__)
+
+
+@app.context_processor
+def inject_app_version():
+    return {"app_version": APP_VERSION}
 
 
 def save_cover_upload(file_storage):
@@ -255,7 +275,9 @@ def add_history(book_id):
         )
     elif status == "leido":
         open_entry = db.execute(
-            "SELECT id FROM reading_log WHERE book_id = ? AND status = 'leyendo' AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1",
+            "SELECT id FROM reading_log "
+            "WHERE book_id = ? AND status = 'leyendo' AND finished_at IS NULL "
+            "ORDER BY started_at DESC LIMIT 1",
             (book_id,),
         ).fetchone()
         rating = request.form.get("rating") or None
@@ -267,7 +289,9 @@ def add_history(book_id):
             )
         else:
             db.execute(
-                "INSERT INTO reading_log (book_id, status, started_at, finished_at, rating, notes) VALUES (?, 'leido', ?, ?, ?, ?)",
+                "INSERT INTO reading_log "
+                "(book_id, status, started_at, finished_at, rating, notes) "
+                "VALUES (?, 'leido', ?, ?, ?, ?)",
                 (book_id, today, today, rating, notes),
             )
     db.commit()
