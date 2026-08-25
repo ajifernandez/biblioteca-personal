@@ -1,0 +1,16 @@
+# Pega este contenido en Dockge: "+ Compose" -> nombre "biblioteca-personal" -> pega -> Deploy.
+# Docker construye la imagen clonando el repo de GitHub directamente, sin necesitar
+# el código fuente en el host de Dockge.
+services:
+  biblioteca:
+    build:
+      context: https://github.com/ajifernandez/biblioteca-personal.git
+    container_name: biblioteca_personal
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - biblioteca_data:/data
+
+volumes:
+  biblioteca_data:
