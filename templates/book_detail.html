@@ -68,6 +68,15 @@
     <button type="submit" class="btn btn-primary">Guardar cambios</button>
   </form>
   <script>
+    function updateCoverPreviewFromUrl() {
+      const urlInput = document.getElementById("f-cover");
+      const preview = document.getElementById("edit-cover-preview");
+      if (urlInput && preview && urlInput.value.trim()) {
+        preview.src = urlInput.value.trim();
+        preview.style.display = "block";
+      }
+    }
+
     document.getElementById("edit-cover-file").addEventListener("change", (e) => {
       if (e.target.files[0]) {
         const preview = document.getElementById("edit-cover-preview");
@@ -75,6 +84,8 @@
         preview.style.display = "block";
       }
     });
+
+    document.getElementById("f-cover").addEventListener("input", updateCoverPreviewFromUrl);
 
     const refillBtn = document.getElementById("refill-isbn");
     if (refillBtn) {
@@ -89,25 +100,20 @@
             status.textContent = "No se encontró información automática.";
             return;
           }
-          const fillIfEmpty = (id, value) => {
+          const fill = (id, value) => {
             const el = document.getElementById(id);
-            if (el && !el.value.trim()) el.value = value || "";
+            if (el && value) el.value = value;
           };
-          fillIfEmpty("f-title", data.title);
-          fillIfEmpty("f-author", data.author);
-          fillIfEmpty("f-publisher", data.publisher);
-          fillIfEmpty("f-year", data.published_year);
-          fillIfEmpty("f-cover", data.cover_url);
-          fillIfEmpty("f-description", data.description);
-          const coverInput = document.getElementById("f-cover");
-          if (coverInput && coverInput.value && !document.getElementById("edit-cover-file").files[0]) {
-            const preview = document.getElementById("edit-cover-preview");
-            preview.src = coverInput.value;
-            preview.style.display = "block";
-          }
+          fill("f-title", data.title);
+          fill("f-author", data.author);
+          fill("f-publisher", data.publisher);
+          fill("f-year", data.published_year);
+          fill("f-cover", data.cover_url);
+          fill("f-description", data.description);
+          updateCoverPreviewFromUrl();
           status.textContent = data.source
-            ? `Datos completados desde ${data.source}. Revisa antes de guardar.`
-            : "Datos completados. Revisa antes de guardar.";
+            ? `✅ Libro encontrado en ${data.source}. Revisa antes de guardar.`
+            : "✅ Libro encontrado. Revisa antes de guardar.";
         } catch (e) {
           status.textContent = "Error al buscar. Intenta de nuevo.";
         }
