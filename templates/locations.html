@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h1>Ubicaciones</h1>
+  <p>Cuántos libros tienes en cada sitio. Toca una para ver esos libros.</p>
+</div>
+
+{% if not locations %}
+  <div class="empty-state">
+    <div class="icon">📍</div>
+    <p><strong>Todavía no hay libros catalogados.</strong></p>
+  </div>
+{% else %}
+  <div class="location-grid">
+    {% for loc in locations %}
+      {% if loc.loc %}
+        <a class="location-card" href="{{ url_for('index', q=loc.loc, field='ubicacion') }}">
+          <span class="location-name">📍 {{ loc.loc }}</span>
+          <span class="location-count">{{ loc.n }}</span>
+        </a>
+      {% else %}
+        <a class="location-card" href="{{ url_for('index', field='sin_ubicacion') }}">
+          <span class="location-name muted">Sin ubicación</span>
+          <span class="location-count">{{ loc.n }}</span>
+        </a>
+      {% endif %}
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

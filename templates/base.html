@@ -11,7 +11,10 @@
 <body>
   <div class="topnav">
     <a class="brand" href="{{ url_for('index') }}"><span class="logo-emoji">📚</span> Mi Biblioteca</a>
-    <a class="btn btn-primary" id="nav-add-btn" href="{{ url_for('scan') }}" aria-label="Añadir libro">＋<span class="btn-label"> Añadir libro</span></a>
+    <div class="topnav-actions">
+      <a class="btn btn-ghost" id="nav-locations-btn" href="{{ url_for('locations') }}" aria-label="Ubicaciones">📍<span class="btn-label"> Ubicaciones</span></a>
+      <a class="btn btn-primary" id="nav-add-btn" href="{{ url_for('scan') }}" aria-label="Añadir libro">＋<span class="btn-label"> Añadir libro</span></a>
+    </div>
   </div>
   <div class="page">
     {% block content %}{% endblock %}

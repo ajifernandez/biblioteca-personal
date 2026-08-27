@@ -38,7 +38,8 @@
     </div>
     <div class="field">
       <label>Ubicación</label>
-      <input type="text" name="location" id="f-location" placeholder="ej. Salón, estante 2">
+      <input type="text" name="location" id="f-location" list="location-suggestions" placeholder="ej. Salón, estante 2">
+      <datalist id="location-suggestions"></datalist>
     </div>
     <div class="field full">
       <label>Portada</label>
@@ -67,6 +68,23 @@
   const coverFile = document.getElementById("f-cover-file");
   const coverUrlInput = document.getElementById("f-cover");
   const coverPreview = document.getElementById("cover-preview");
+  const locationInput = document.getElementById("f-location");
+  const locationSuggestions = document.getElementById("location-suggestions");
+
+  const lastLocation = localStorage.getItem("lastLocation");
+  if (lastLocation) locationInput.value = lastLocation;
+  locationInput.addEventListener("input", () => {
+    localStorage.setItem("lastLocation", locationInput.value);
+  });
+
+  fetch("/api/locations")
+    .then((res) => res.json())
+    .then((names) => {
+      locationSuggestions.innerHTML = names
+        .map((name) => `<option value="${name.replace(/"/g, "&quot;")}">`)
+        .join("");
+    })
+    .catch(() => {});
 
   function showCoverPreview(src) {
     if (src) {

@@ -355,6 +355,31 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/ubicaciones")
+def locations():
+    db = get_db()
+    rows = db.execute(
+        """SELECT
+               CASE WHEN TRIM(COALESCE(location, '')) = '' THEN NULL ELSE TRIM(location) END AS loc,
+               COUNT(*) AS n
+           FROM books
+           GROUP BY loc
+           ORDER BY loc IS NULL, loc COLLATE NOCASE"""
+    ).fetchall()
+    return render_template("locations.html", locations=rows)
+
+
+@app.route("/api/locations")
+def api_locations():
+    db = get_db()
+    rows = db.execute(
+        """SELECT DISTINCT TRIM(location) AS loc FROM books
+           WHERE TRIM(COALESCE(location, '')) != ''
+           ORDER BY loc COLLATE NOCASE"""
+    ).fetchall()
+    return jsonify([row["loc"] for row in rows])
+
+
 SELECT_BOOKS_SQL = """
     SELECT b.*, l.borrower_name AS current_borrower, l.loaned_at AS current_loaned_at,
            r.started_at AS reading_started_at
@@ -366,6 +391,10 @@ SELECT_BOOKS_SQL = """
 
 def find_books(q, field):
     db = get_db()
+    if field == "sin_ubicacion":
+        return db.execute(
+            f"{SELECT_BOOKS_SQL} WHERE b.location IS NULL OR TRIM(b.location) = '' ORDER BY b.title"
+        ).fetchall()
     if not q:
         return db.execute(f"{SELECT_BOOKS_SQL} ORDER BY b.added_at DESC").fetchall()
 

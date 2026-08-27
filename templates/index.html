@@ -2,7 +2,7 @@
 {% block content %}
 <div class="page-header">
   <h1>Tu biblioteca</h1>
-  <p>Busca por título, ISBN, autor, ubicación o persona que tiene un préstamo.</p>
+  <p id="page-subtitle">Busca por título, ISBN, autor, ubicación o persona que tiene un préstamo.</p>
 </div>
 
 <div class="toolbar-row">
@@ -105,8 +105,32 @@
   document.getElementById('view-grid-btn').addEventListener('click', function () { setView('grid'); });
   document.getElementById('view-table-btn').addEventListener('click', function () { setView('table'); });
 
+  function loadInitialResults() {
+    var urlParams = new URLSearchParams(window.location.search);
+    var q = urlParams.get('q') || '';
+    var field = urlParams.get('field') || 'todo';
+
+    var qInput = document.querySelector('.search-card input[name="q"]');
+    var fieldSelect = document.querySelector('.search-card select[name="field"]');
+    if (q) qInput.value = q;
+    if (Array.prototype.some.call(fieldSelect.options, function (o) { return o.value === field; })) {
+      fieldSelect.value = field;
+    }
+    if (field === 'sin_ubicacion') {
+      document.getElementById('page-subtitle').textContent = 'Mostrando libros sin ubicación asignada.';
+    } else if (field === 'ubicacion' && q) {
+      document.getElementById('page-subtitle').textContent = 'Mostrando libros en «' + q + '».';
+    }
+
+    var params = new URLSearchParams();
+    params.set('q', q);
+    params.set('field', field);
+    params.set('view', currentView());
+    htmx.ajax('GET', '{{ url_for("search") }}?' + params.toString(), { target: '#results', swap: 'innerHTML' });
+  }
+
   applyViewButtons();
-  reloadResults();
+  loadInitialResults();
 
   document.body.addEventListener('htmx:afterSwap', function (e) {
     if (e.detail.target && e.detail.target.id === 'results') updateBulkBar();
