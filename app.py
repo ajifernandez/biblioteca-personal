@@ -270,7 +270,8 @@ def find_books(q, field):
 def search():
     q = request.args.get("q", "").strip()
     field = request.args.get("field", "todo")
-    return render_template("partials/_book_list.html", books=find_books(q, field))
+    view = request.args.get("view", "grid")
+    return render_template("partials/_book_list.html", books=find_books(q, field), view=view)
 
 
 @app.route("/books/bulk-location", methods=["POST"])
@@ -288,7 +289,8 @@ def bulk_update_location():
 
     q = request.form.get("q", "").strip()
     field = request.form.get("field", "todo")
-    return render_template("partials/_book_list.html", books=find_books(q, field))
+    view = request.form.get("view", "grid")
+    return render_template("partials/_book_list.html", books=find_books(q, field), view=view)
 
 
 @app.route("/books/bulk-loan", methods=["POST"])
@@ -313,7 +315,8 @@ def bulk_create_loan():
 
     q = request.form.get("q", "").strip()
     field = request.form.get("field", "todo")
-    return render_template("partials/_book_list.html", books=find_books(q, field))
+    view = request.form.get("view", "grid")
+    return render_template("partials/_book_list.html", books=find_books(q, field), view=view)
 
 
 @app.route("/scan")

@@ -6,7 +6,7 @@
 </div>
 
 <div class="toolbar-row">
-  <form class="search-card" hx-get="{{ url_for('search') }}" hx-target="#results" hx-trigger="input changed delay:300ms from:input, change from:select">
+  <form class="search-card" hx-get="{{ url_for('search') }}" hx-target="#results" hx-trigger="input changed delay:300ms from:input, change from:select" hx-vals="js:{view: currentView()}">
     <span class="search-icon">🔍</span>
     <input type="text" name="q" placeholder="Buscar..." autofocus>
     <select name="field">
@@ -18,6 +18,10 @@
       <option value="prestado">Prestado a</option>
     </select>
   </form>
+  <div class="view-toggle">
+    <button type="button" id="view-grid-btn" class="btn btn-ghost" title="Vista en cuadrícula">🔲</button>
+    <button type="button" id="view-table-btn" class="btn btn-ghost" title="Vista en tabla">☰</button>
+  </div>
   <button type="button" id="select-toggle" class="btn btn-ghost">Seleccionar</button>
 </div>
 
@@ -39,6 +43,7 @@
       hx-post="{{ url_for('bulk_update_location') }}"
       hx-target="#results"
       hx-include="#page-scope, #bulk-location, .search-card input[name='q'], .search-card select[name='field']"
+      hx-vals="js:{view: currentView()}"
       hx-on::after-request="exitSelectMode()"
     >Aplicar ubicación</button>
   </div>
@@ -53,6 +58,7 @@
       hx-post="{{ url_for('bulk_create_loan') }}"
       hx-target="#results"
       hx-include="#page-scope, #bulk-borrower, .search-card input[name='q'], .search-card select[name='field']"
+      hx-vals="js:{view: currentView()}"
       hx-on::after-request="exitSelectMode()"
     >Prestar</button>
   </div>
@@ -61,12 +67,48 @@
 </div>
 
 <div id="page-scope">
-  <div id="results" hx-get="{{ url_for('search') }}" hx-trigger="load">
+  <div id="results">
     <div class="empty-state pulse"><div class="icon">📖</div><p>Cargando tu biblioteca...</p></div>
   </div>
 </div>
 
 <script>
+  function currentView() {
+    return localStorage.getItem('bookView') || 'grid';
+  }
+
+  function applyViewButtons() {
+    var v = currentView();
+    document.getElementById('view-grid-btn').classList.toggle('active', v === 'grid');
+    document.getElementById('view-table-btn').classList.toggle('active', v === 'table');
+  }
+
+  function reloadResults() {
+    var form = document.querySelector('.search-card');
+    var params = new URLSearchParams(new FormData(form));
+    params.set('view', currentView());
+    htmx.ajax('GET', '{{ url_for("search") }}?' + params.toString(), { target: '#results', swap: 'innerHTML' });
+  }
+
+  function setView(mode) {
+    localStorage.setItem('bookView', mode);
+    applyViewButtons();
+    reloadResults();
+  }
+
+  document.getElementById('view-grid-btn').addEventListener('click', function () { setView('grid'); });
+  document.getElementById('view-table-btn').addEventListener('click', function () { setView('table'); });
+
+  applyViewButtons();
+  reloadResults();
+
+  document.addEventListener('click', function (e) {
+    var row = e.target.closest('.book-row');
+    if (!row || document.body.classList.contains('select-mode') || row.tagName !== 'TR') return;
+    if (e.target.closest('input')) return;
+    window.location = row.dataset.href;
+  });
+
   function updateBulkBar() {
     var boxes = document.querySelectorAll('#results input[name="book_ids"]');
     var n = Array.prototype.filter.call(boxes, function (cb) { return cb.checked; }).length;
@@ -103,7 +145,7 @@
     document.querySelectorAll('#results input[name="book_ids"]:checked').forEach(function (cb) {
       cb.checked = false;
     });
-    document.querySelectorAll('.book-card.selected').forEach(function (c) {
+    document.querySelectorAll('.book-row.selected').forEach(function (c) {
       c.classList.remove('selected');
     });
     updateBulkBar();
@@ -123,27 +165,27 @@
     var allChecked = boxes.length > 0 && Array.prototype.every.call(boxes, function (cb) { return cb.checked; });
     boxes.forEach(function (cb) {
       cb.checked = !allChecked;
-      var card = cb.closest('.book-card');
-      if (card) card.classList.toggle('selected', cb.checked);
+      var row = cb.closest('.book-row');
+      if (row) row.classList.toggle('selected', cb.checked);
     });
     updateBulkBar();
   });
 
   document.addEventListener('click', function (e) {
     if (!document.body.classList.contains('select-mode')) return;
-    var card = e.target.closest('.book-card');
-    if (!card) return;
+    var row = e.target.closest('.book-row');
+    if (!row) return;
     e.preventDefault();
-    var checkbox = card.querySelector('input[name="book_ids"]');
+    var checkbox = row.querySelector('input[name="book_ids"]');
     checkbox.checked = !checkbox.checked;
-    card.classList.toggle('selected', checkbox.checked);
+    row.classList.toggle('selected', checkbox.checked);
     updateBulkBar();
   });
 
   document.addEventListener('change', function (e) {
     if (!e.target || e.target.name !== 'book_ids') return;
-    var card = e.target.closest('.book-card');
-    if (card) card.classList.toggle('selected', e.target.checked);
+    var row = e.target.closest('.book-row');
+    if (row) row.classList.toggle('selected', e.target.checked);
     updateBulkBar();
   });
 </script>
