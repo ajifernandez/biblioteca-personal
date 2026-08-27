@@ -1,9 +1,11 @@
+import json
 import os
+import re
 import sqlite3
 import uuid
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, unquote
 
 import requests
 from flask import Flask, g, jsonify, redirect, render_template, request, send_from_directory, url_for
@@ -243,12 +245,79 @@ def lookup_bne(isbn):
     return None
 
 
+def lookup_buscalibre(isbn):
+    try:
+        r = requests.get(
+            "https://www.buscalibre.es/libros/search",
+            params={"q": isbn},
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=8,
+        )
+        r.raise_for_status()
+        if "/p/" not in r.url:
+            return None
+        for block in re.findall(r'<script type="application/ld\+json">(.*?)</script>', r.text, re.S):
+            try:
+                data = json.loads(block)
+            except ValueError:
+                continue
+            if data.get("@type") != "Product":
+                continue
+            author = data.get("author") or {}
+            publisher = data.get("publisher") or {}
+            return make_book_info(
+                title=data.get("name", ""),
+                author=author.get("name", "") if isinstance(author, dict) else "",
+                publisher=publisher.get("name", "") if isinstance(publisher, dict) else "",
+                cover_url=data.get("image", ""),
+                description=data.get("description", ""),
+                source="Buscalibre",
+            )
+    except requests.RequestException:
+        pass
+    return None
+
+
+def lookup_pluton(isbn):
+    try:
+        session = requests.Session()
+        session.headers.update({"User-Agent": "Mozilla/5.0"})
+        session.get("https://pedidos.plutonediciones.com/es", timeout=8)
+        token = session.cookies.get("XSRF-TOKEN")
+        if not token:
+            return None
+        r = session.post(
+            "https://pedidos.plutonediciones.com/es/search/get-for-typeahead",
+            json={
+                "search": isbn,
+                "selectFields": ["idarticulo", "descripcion", "autor", "ean"],
+                "resultsPerPage": 5,
+            },
+            headers={"X-XSRF-TOKEN": unquote(token), "Accept": "application/json"},
+            timeout=8,
+        )
+        r.raise_for_status()
+        for item in r.json():
+            if isinstance(item, dict) and item.get("ean") == isbn:
+                return make_book_info(
+                    title=item.get("descripcion", ""),
+                    author=item.get("autor", ""),
+                    publisher="Plutón Ediciones",
+                    source="Plutón Ediciones",
+                )
+    except (requests.RequestException, ValueError):
+        pass
+    return None
+
+
 LOOKUP_PROVIDERS = [
     ("local", "tu biblioteca", None),
+    ("buscalibre", "Buscalibre", lookup_buscalibre),
     ("google", "Google Books", lookup_google_books),
     ("openlibrary_books", "Open Library", lookup_open_library_books),
     ("openlibrary_search", "Open Library (búsqueda)", lookup_open_library_search),
     ("bne", "Biblioteca Nacional de España", lookup_bne),
+    ("pluton", "Plutón Ediciones", lookup_pluton),
 ]
 
 
