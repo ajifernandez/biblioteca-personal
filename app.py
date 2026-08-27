@@ -88,6 +88,8 @@ def make_book_info(
 ):
     if not title:
         return None
+    if cover_url.startswith("http://"):
+        cover_url = "https://" + cover_url[len("http://"):]
     return {
         "title": title,
         "author": author,
@@ -194,15 +196,22 @@ def make_isbn_search_links(isbn):
 
 
 def lookup_isbn(isbn):
+    info = None
     for provider in (
         lookup_google_books,
         lookup_open_library_books,
         lookup_open_library_search,
     ):
-        info = provider(isbn)
-        if info:
-            return info
-    return None
+        result = provider(isbn)
+        if not result:
+            continue
+        if info is None:
+            info = result
+        elif not info["cover_url"] and result["cover_url"]:
+            info["cover_url"] = result["cover_url"]
+        if info["cover_url"]:
+            break
+    return info
 
 
 @app.route("/")
