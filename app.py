@@ -324,9 +324,14 @@ def scan():
     return render_template("scan.html")
 
 
-def lookup_local_book(isbn):
+def lookup_local_book(isbn, exclude_book_id=None):
     db = get_db()
-    row = db.execute("SELECT * FROM books WHERE isbn = ?", (isbn,)).fetchone()
+    if exclude_book_id is None:
+        row = db.execute("SELECT * FROM books WHERE isbn = ?", (isbn,)).fetchone()
+    else:
+        row = db.execute(
+            "SELECT * FROM books WHERE isbn = ? AND id != ?", (isbn, exclude_book_id)
+        ).fetchone()
     if not row:
         return None
     return make_book_info(
@@ -343,8 +348,9 @@ def lookup_local_book(isbn):
 @app.route("/api/lookup/<isbn>")
 def api_lookup(isbn):
     isbn = "".join(c for c in isbn if c.isalnum())
+    exclude_book_id = request.args.get("exclude_book_id", type=int)
     search_links = make_isbn_search_links(isbn)
-    info = lookup_local_book(isbn) or lookup_isbn(isbn)
+    info = lookup_local_book(isbn, exclude_book_id) or lookup_isbn(isbn)
     if not info:
         return jsonify({"found": False, "isbn": isbn, "search_links": search_links})
     info["found"] = True

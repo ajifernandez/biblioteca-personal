@@ -104,7 +104,7 @@
         }
         status.textContent = "Buscando...";
         try {
-          const res = await fetch(`/api/lookup/${isbn}`);
+          const res = await fetch(`/api/lookup/${isbn}?exclude_book_id={{ book.id }}`);
           const data = await res.json();
           if (!data.found) {
             status.textContent = "No se encontró información automática.";
