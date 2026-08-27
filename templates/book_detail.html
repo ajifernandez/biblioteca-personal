@@ -46,6 +46,14 @@
         <label>Ubicación</label>
         <input type="text" name="location" value="{{ book.location or '' }}">
       </div>
+      <div class="field">
+        <label>ISBN</label>
+        <input type="text" name="isbn" id="f-isbn" value="{{ book.isbn or '' }}">
+      </div>
+      <div class="field full">
+        <label>Descripción</label>
+        <textarea name="description" id="f-description" rows="4">{{ book.description or '' }}</textarea>
+      </div>
       <div class="field full">
         <label>Portada</label>
         <div style="display:flex; gap:0.75rem; align-items:flex-start;">
@@ -61,10 +69,8 @@
         </div>
       </div>
     </div>
-    {% if book.isbn %}
-      <button type="button" id="refill-isbn" class="btn btn-ghost" data-isbn="{{ book.isbn }}">🔍 Rellenar por ISBN</button>
-      <p id="refill-status" style="font-size:0.85rem;color:var(--text-muted);margin-top:0.5rem;"></p>
-    {% endif %}
+    <button type="button" id="refill-isbn" class="btn btn-ghost">🔍 Rellenar por ISBN</button>
+    <p id="refill-status" style="font-size:0.85rem;color:var(--text-muted);margin-top:0.5rem;"></p>
     <button type="submit" class="btn btn-primary">Guardar cambios</button>
   </form>
   <script>
@@ -90,8 +96,12 @@
     const refillBtn = document.getElementById("refill-isbn");
     if (refillBtn) {
       refillBtn.addEventListener("click", async () => {
-        const isbn = refillBtn.dataset.isbn;
+        const isbn = document.getElementById("f-isbn").value.trim();
         const status = document.getElementById("refill-status");
+        if (!isbn) {
+          status.textContent = "Escribe primero un ISBN.";
+          return;
+        }
         status.textContent = "Buscando...";
         try {
           const res = await fetch(`/api/lookup/${isbn}`);

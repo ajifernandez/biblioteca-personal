@@ -443,21 +443,28 @@ def update_book(book_id):
         or request.form.get("cover_url", "").strip()
         or existing["cover_url"]
     )
+    isbn = request.form.get("isbn", "").strip() or None
 
-    db.execute(
-        """UPDATE books SET
-           title=?, author=?, publisher=?, published_year=?, location=?, cover_url=?
-           WHERE id=?""",
-        (
-            request.form.get("title", "").strip(),
-            request.form.get("author", "").strip(),
-            request.form.get("publisher", "").strip(),
-            request.form.get("published_year", "").strip(),
-            request.form.get("location", "").strip(),
-            cover_url,
-            book_id,
-        ),
-    )
+    try:
+        db.execute(
+            """UPDATE books SET
+               isbn=?, title=?, author=?, publisher=?, published_year=?,
+               location=?, cover_url=?, description=?
+               WHERE id=?""",
+            (
+                isbn,
+                request.form.get("title", "").strip(),
+                request.form.get("author", "").strip(),
+                request.form.get("publisher", "").strip(),
+                request.form.get("published_year", "").strip(),
+                request.form.get("location", "").strip(),
+                cover_url,
+                request.form.get("description", "").strip(),
+                book_id,
+            ),
+        )
+    except sqlite3.IntegrityError:
+        return "Ese ISBN ya está en otro libro de la biblioteca", 400
     db.commit()
     return redirect(url_for("book_detail", book_id=book_id))
 
