@@ -73,6 +73,7 @@
     <p id="refill-status" style="font-size:0.85rem;color:var(--text-muted);margin-top:0.5rem;"></p>
     <button type="submit" class="btn btn-primary">Guardar cambios</button>
   </form>
+  <script src="{{ url_for('static', filename='isbn-lookup.js') }}"></script>
   <script>
     function updateCoverPreviewFromUrl() {
       const urlInput = document.getElementById("f-cover");
@@ -102,11 +103,12 @@
           status.textContent = "Escribe primero un ISBN.";
           return;
         }
-        status.textContent = "Buscando...";
         try {
-          const res = await fetch(`/api/lookup/${isbn}?exclude_book_id={{ book.id }}`);
-          const data = await res.json();
-          if (!data.found) {
+          const data = await lookupIsbnProgressive(isbn, {
+            excludeBookId: {{ book.id }},
+            onStatus: (msg) => { status.textContent = msg; },
+          });
+          if (!data || !data.found) {
             status.textContent = "No se encontró información automática.";
             return;
           }

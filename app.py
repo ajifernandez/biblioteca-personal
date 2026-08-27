@@ -1,6 +1,7 @@
 import os
 import sqlite3
 import uuid
+import xml.etree.ElementTree as ET
 from datetime import datetime
 from urllib.parse import quote_plus
 
@@ -195,23 +196,60 @@ def make_isbn_search_links(isbn):
     ]
 
 
-def lookup_isbn(isbn):
-    info = None
-    for provider in (
-        lookup_google_books,
-        lookup_open_library_books,
-        lookup_open_library_search,
-    ):
-        result = provider(isbn)
-        if not result:
-            continue
-        if info is None:
-            info = result
-        elif not info["cover_url"] and result["cover_url"]:
-            info["cover_url"] = result["cover_url"]
-        if info["cover_url"]:
-            break
-    return info
+MARC_NS = {
+    "srw": "http://www.loc.gov/zing/srw/",
+    "marc": "http://www.loc.gov/MARC21/slim",
+}
+
+
+def marc_values(record, tag, code):
+    values = []
+    for datafield in record.findall(f'marc:datafield[@tag="{tag}"]', MARC_NS):
+        for subfield in datafield.findall(f'marc:subfield[@code="{code}"]', MARC_NS):
+            if subfield.text and subfield.text.strip():
+                values.append(subfield.text.strip())
+    return values
+
+
+def lookup_bne(isbn):
+    try:
+        r = requests.get(
+            "https://catalogo.bne.es/view/sru/34BNE_INST",
+            params={
+                "operation": "searchRetrieve",
+                "version": "1.2",
+                "query": f'alma.isbn="{isbn}"',
+                "recordSchema": "marcxml",
+                "maximumRecords": 1,
+            },
+            timeout=8,
+        )
+        r.raise_for_status()
+        record = ET.fromstring(r.content).find(".//srw:recordData/marc:record", MARC_NS)
+        if record is None:
+            return None
+        title = " ".join(marc_values(record, "245", "a") + marc_values(record, "245", "b")).rstrip(" :")
+        publisher = ", ".join(marc_values(record, "264", "b") or marc_values(record, "260", "b"))
+        year = " ".join(marc_values(record, "264", "c") or marc_values(record, "260", "c"))
+        return make_book_info(
+            title=title,
+            author=", ".join(marc_values(record, "100", "a")),
+            publisher=publisher,
+            published_year=year,
+            source="Biblioteca Nacional de España",
+        )
+    except (requests.RequestException, ET.ParseError):
+        pass
+    return None
+
+
+LOOKUP_PROVIDERS = [
+    ("local", "tu biblioteca", None),
+    ("google", "Google Books", lookup_google_books),
+    ("openlibrary_books", "Open Library", lookup_open_library_books),
+    ("openlibrary_search", "Open Library (búsqueda)", lookup_open_library_search),
+    ("bne", "Biblioteca Nacional de España", lookup_bne),
+]
 
 
 @app.route("/")
@@ -345,18 +383,35 @@ def lookup_local_book(isbn, exclude_book_id=None):
     )
 
 
-@app.route("/api/lookup/<isbn>")
-def api_lookup(isbn):
+@app.route("/api/lookup-providers")
+def api_lookup_providers():
+    return jsonify([{"id": pid, "label": label} for pid, label, _ in LOOKUP_PROVIDERS])
+
+
+@app.route("/api/lookup/<provider_id>/<isbn>")
+def api_lookup_provider(provider_id, isbn):
     isbn = "".join(c for c in isbn if c.isalnum())
-    exclude_book_id = request.args.get("exclude_book_id", type=int)
-    search_links = make_isbn_search_links(isbn)
-    info = lookup_local_book(isbn, exclude_book_id) or lookup_isbn(isbn)
+    match = next((p for p in LOOKUP_PROVIDERS if p[0] == provider_id), None)
+    if not match:
+        return jsonify({"found": False, "isbn": isbn}), 404
+
+    if provider_id == "local":
+        exclude_book_id = request.args.get("exclude_book_id", type=int)
+        info = lookup_local_book(isbn, exclude_book_id)
+    else:
+        info = match[2](isbn)
+
     if not info:
-        return jsonify({"found": False, "isbn": isbn, "search_links": search_links})
+        return jsonify({"found": False, "isbn": isbn})
     info["found"] = True
     info["isbn"] = isbn
-    info["search_links"] = search_links
     return jsonify(info)
+
+
+@app.route("/api/isbn-search-links/<isbn>")
+def api_isbn_search_links(isbn):
+    isbn = "".join(c for c in isbn if c.isalnum())
+    return jsonify(make_isbn_search_links(isbn))
 
 
 @app.route("/books", methods=["POST"])

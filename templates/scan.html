@@ -56,6 +56,7 @@
 </form>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
+<script src="{{ url_for('static', filename='isbn-lookup.js') }}"></script>
 <script>
   const reader = new Html5Qrcode("reader", { formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13] });
   const frame = document.getElementById("scan-frame");
@@ -132,9 +133,11 @@
     document.getElementById("f-isbn").value = isbn;
 
     try {
-      const res = await fetch(`/api/lookup/${isbn}`);
-      const data = await res.json();
-      if (data.found) {
+      const data = await lookupIsbnProgressive(isbn, {
+        onStatus: (msg) => { status.textContent = msg; },
+      });
+      showSearchLinks(await fetchIsbnSearchLinks(isbn));
+      if (data && data.found) {
         document.getElementById("f-title").value = data.title || "";
         document.getElementById("f-author").value = data.author || "";
         document.getElementById("f-publisher").value = data.publisher || "";
@@ -142,12 +145,10 @@
         document.getElementById("f-cover").value = data.cover_url || "";
         document.getElementById("f-description").value = data.description || "";
         showCoverPreview(data.cover_url || "");
-        showSearchLinks(data.search_links || []);
         status.textContent = data.source
           ? `✅ Libro encontrado en ${data.source}. Revisa los datos y añade la ubicación.`
           : "✅ Libro encontrado. Revisa los datos y añade la ubicación.";
       } else {
-        showSearchLinks(data.search_links || []);
         status.textContent = "No se encontró información automática. "
           + "Puedes buscar el ISBN fuera y rellenar los datos a mano.";
       }
