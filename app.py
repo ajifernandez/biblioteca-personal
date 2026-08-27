@@ -2,6 +2,7 @@ import os
 import sqlite3
 import uuid
 from datetime import datetime
+from urllib.parse import quote_plus
 
 import requests
 from flask import Flask, g, jsonify, redirect, render_template, request, send_from_directory, url_for
@@ -76,29 +77,59 @@ def init_db():
     conn.close()
 
 
-def lookup_isbn(isbn):
-    """Google Books first, Open Library fallback. Returns dict or None."""
+def make_book_info(
+    title,
+    author="",
+    publisher="",
+    published_year="",
+    cover_url="",
+    description="",
+    source="",
+):
+    if not title:
+        return None
+    return {
+        "title": title,
+        "author": author,
+        "publisher": publisher,
+        "published_year": str(published_year or "")[:4],
+        "cover_url": cover_url,
+        "description": description,
+        "source": source,
+    }
+
+
+def lookup_google_books(isbn):
+    params = {"q": f"isbn:{isbn}"}
+    api_key = os.environ.get("GOOGLE_BOOKS_API_KEY")
+    if api_key:
+        params["key"] = api_key
+
     try:
         r = requests.get(
             "https://www.googleapis.com/books/v1/volumes",
-            params={"q": f"isbn:{isbn}"},
+            params=params,
             timeout=5,
         )
         r.raise_for_status()
-        items = r.json().get("items")
+        items = r.json().get("items") or []
         if items:
-            info = items[0]["volumeInfo"]
-            return {
-                "title": info.get("title", ""),
-                "author": ", ".join(info.get("authors", [])),
-                "publisher": info.get("publisher", ""),
-                "published_year": (info.get("publishedDate") or "")[:4],
-                "cover_url": info.get("imageLinks", {}).get("thumbnail", ""),
-                "description": info.get("description", ""),
-            }
+            info = items[0].get("volumeInfo", {})
+            return make_book_info(
+                title=info.get("title", ""),
+                author=", ".join(info.get("authors", [])),
+                publisher=info.get("publisher", ""),
+                published_year=info.get("publishedDate", ""),
+                cover_url=info.get("imageLinks", {}).get("thumbnail", ""),
+                description=info.get("description", ""),
+                source="Google Books",
+            )
     except requests.RequestException:
         pass
+    return None
 
+
+def lookup_open_library_books(isbn):
     try:
         r = requests.get(
             "https://openlibrary.org/api/books",
@@ -108,17 +139,97 @@ def lookup_isbn(isbn):
         r.raise_for_status()
         data = r.json().get(f"ISBN:{isbn}")
         if data:
-            return {
-                "title": data.get("title", ""),
-                "author": ", ".join(a["name"] for a in data.get("authors", [])),
-                "publisher": ", ".join(p["name"] for p in data.get("publishers", [])),
-                "published_year": (data.get("publish_date") or "")[-4:],
-                "cover_url": data.get("cover", {}).get("medium", ""),
-                "description": "",
-            }
+            return make_book_info(
+                title=data.get("title", ""),
+                author=", ".join(a["name"] for a in data.get("authors", [])),
+                publisher=", ".join(p["name"] for p in data.get("publishers", [])),
+                published_year=(data.get("publish_date") or "")[-4:],
+                cover_url=data.get("cover", {}).get("medium", ""),
+                source="Open Library Books",
+            )
     except requests.RequestException:
         pass
+    return None
 
+
+def lookup_open_library_search(isbn):
+    try:
+        r = requests.get(
+            "https://openlibrary.org/search.json",
+            params={"isbn": isbn, "limit": 1},
+            timeout=5,
+        )
+        r.raise_for_status()
+        docs = r.json().get("docs") or []
+        if docs:
+            doc = docs[0]
+            cover_id = doc.get("cover_i")
+            cover_url = (
+                f"https://covers.openlibrary.org/b/id/{cover_id}-M.jpg"
+                if cover_id
+                else ""
+            )
+            return make_book_info(
+                title=doc.get("title", ""),
+                author=", ".join(doc.get("author_name", [])),
+                publisher=", ".join((doc.get("publisher") or [])[:2]),
+                published_year=doc.get("first_publish_year", ""),
+                cover_url=cover_url,
+                source="Open Library Search",
+            )
+    except requests.RequestException:
+        pass
+    return None
+
+
+def lookup_isbndb(isbn):
+    api_key = os.environ.get("ISBNDB_API_KEY")
+    if not api_key:
+        return None
+
+    try:
+        r = requests.get(
+            f"https://api2.isbndb.com/book/{isbn}",
+            headers={"Authorization": api_key},
+            timeout=5,
+        )
+        r.raise_for_status()
+        book = r.json().get("book") or {}
+        return make_book_info(
+            title=book.get("title", ""),
+            author=", ".join(book.get("authors") or []),
+            publisher=book.get("publisher", ""),
+            published_year=book.get("date_published", ""),
+            cover_url=book.get("image", ""),
+            description=book.get("synopsis", ""),
+            source="ISBNdb",
+        )
+    except requests.RequestException:
+        pass
+    return None
+
+
+def make_isbn_search_links(isbn):
+    query = quote_plus(f"ISBN {isbn}")
+    return [
+        {"label": "Google", "url": f"https://www.google.com/search?q={query}"},
+        {"label": "Buscalibre", "url": f"https://www.buscalibre.com/libros/search?q={isbn}"},
+        {"label": "IberLibro", "url": f"https://www.iberlibro.com/servlet/SearchResults?isbn={isbn}"},
+        {"label": "WorldCat", "url": f"https://search.worldcat.org/isbn/{isbn}"},
+        {"label": "Open Library", "url": f"https://openlibrary.org/search?isbn={isbn}"},
+    ]
+
+
+def lookup_isbn(isbn):
+    for provider in (
+        lookup_google_books,
+        lookup_open_library_books,
+        lookup_open_library_search,
+        lookup_isbndb,
+    ):
+        info = provider(isbn)
+        if info:
+            return info
     return None
 
 
@@ -187,11 +298,13 @@ def scan():
 @app.route("/api/lookup/<isbn>")
 def api_lookup(isbn):
     isbn = "".join(c for c in isbn if c.isalnum())
+    search_links = make_isbn_search_links(isbn)
     info = lookup_isbn(isbn)
     if not info:
-        return jsonify({"found": False, "isbn": isbn})
+        return jsonify({"found": False, "isbn": isbn, "search_links": search_links})
     info["found"] = True
     info["isbn"] = isbn
+    info["search_links"] = search_links
     return jsonify(info)
 
 

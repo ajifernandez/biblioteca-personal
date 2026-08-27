@@ -335,6 +335,15 @@ body {
 }
 .scan-status.active { color: var(--primary); font-weight: 600; }
 
+.lookup-links {
+  text-align: center;
+  margin: -0.5rem 0 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.lookup-links p { margin: 0 0 0.5rem; }
+.lookup-links a { text-decoration: none; }
+
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

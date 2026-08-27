@@ -9,6 +9,7 @@
   <div id="reader"></div>
 </div>
 <p class="scan-status" id="scan-status">Iniciando cámara...</p>
+<div class="lookup-links" id="isbn-search-links" style="display:none;"></div>
 <div style="text-align:center; margin-bottom:1.5rem;">
   <button id="restart-scan" class="btn btn-ghost" style="display:none;">🔄 Escanear otro</button>
 </div>
@@ -61,6 +62,7 @@
   const status = document.getElementById("scan-status");
   const form = document.getElementById("book-form");
   const restartBtn = document.getElementById("restart-scan");
+  const searchLinks = document.getElementById("isbn-search-links");
   const coverFile = document.getElementById("f-cover-file");
   const coverUrlInput = document.getElementById("f-cover");
   const coverPreview = document.getElementById("cover-preview");
@@ -85,10 +87,32 @@
     reader.stop().catch(() => {});
   }
 
+  function showSearchLinks(links) {
+    searchLinks.innerHTML = "";
+    if (!links || links.length === 0) {
+      searchLinks.style.display = "none";
+      return;
+    }
+    const title = document.createElement("p");
+    title.textContent = "Buscar este ISBN en internet:";
+    searchLinks.appendChild(title);
+    for (const link of links) {
+      const anchor = document.createElement("a");
+      anchor.className = "tag";
+      anchor.href = link.url;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      anchor.textContent = link.label;
+      searchLinks.appendChild(anchor);
+    }
+    searchLinks.style.display = "block";
+  }
+
   function startScanner() {
     frame.style.display = "block";
     restartBtn.style.display = "none";
     form.style.display = "none";
+    showSearchLinks([]);
     status.className = "scan-status pulse";
     status.textContent = "Buscando código de barras...";
     reader.start(
@@ -118,11 +142,17 @@
         document.getElementById("f-cover").value = data.cover_url || "";
         document.getElementById("f-description").value = data.description || "";
         showCoverPreview(data.cover_url || "");
-        status.textContent = "✅ Libro encontrado. Revisa los datos y añade la ubicación.";
+        showSearchLinks(data.search_links || []);
+        status.textContent = data.source
+          ? `✅ Libro encontrado en ${data.source}. Revisa los datos y añade la ubicación.`
+          : "✅ Libro encontrado. Revisa los datos y añade la ubicación.";
       } else {
-        status.textContent = "No se encontró información automática. Rellena los datos a mano.";
+        showSearchLinks(data.search_links || []);
+        status.textContent = "No se encontró información automática. "
+          + "Puedes buscar el ISBN fuera y rellenar los datos a mano.";
       }
     } catch (e) {
+      showSearchLinks([]);
       status.textContent = "Error buscando información. Rellena los datos a mano.";
     }
     form.style.display = "block";
