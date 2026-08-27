@@ -29,6 +29,7 @@
   <div class="bulk-tabs">
     <button type="button" class="bulk-tab active" data-mode="location">📍 Ubicación</button>
     <button type="button" class="bulk-tab" data-mode="loan">🤝 Préstamo</button>
+    <button type="button" class="bulk-tab" data-mode="refill">🔄 Actualizar por ISBN</button>
   </div>
   <button type="button" id="select-all" class="btn btn-ghost">Seleccionar todo</button>
   <span id="bulk-count">0 de 0 seleccionados</span>
@@ -63,6 +64,11 @@
     >Prestar</button>
   </div>
 
+  <div class="bulk-action" data-mode="refill" hidden>
+    <span id="bulk-refill-status" class="muted"></span>
+    <button type="button" id="bulk-apply-refill" class="btn btn-primary" disabled>Actualizar por ISBN</button>
+  </div>
+
   <button type="button" id="bulk-cancel" class="btn btn-ghost">Cancelar</button>
 </div>
 
@@ -87,7 +93,7 @@
     var form = document.querySelector('.search-card');
     var params = new URLSearchParams(new FormData(form));
     params.set('view', currentView());
-    htmx.ajax('GET', '{{ url_for("search") }}?' + params.toString(), { target: '#results', swap: 'innerHTML' });
+    return htmx.ajax('GET', '{{ url_for("search") }}?' + params.toString(), { target: '#results', swap: 'innerHTML' });
   }
 
   function setView(mode) {
@@ -116,6 +122,7 @@
     document.getElementById('bulk-apply-location').disabled = n === 0;
     document.getElementById('bulk-apply-loan').disabled =
       n === 0 || document.getElementById('bulk-borrower').value.trim() === '';
+    document.getElementById('bulk-apply-refill').disabled = n === 0;
     document.getElementById('select-all').textContent =
       boxes.length > 0 && n === boxes.length ? 'Deseleccionar todo' : 'Seleccionar todo';
   }
@@ -135,12 +142,49 @@
 
   document.getElementById('bulk-borrower').addEventListener('input', updateBulkBar);
 
+  document.getElementById('bulk-apply-refill').addEventListener('click', async function () {
+    var button = this;
+    var statusEl = document.getElementById('bulk-refill-status');
+    var ids = Array.prototype.map.call(
+      document.querySelectorAll('#results input[name="book_ids"]:checked'),
+      function (cb) { return cb.value; }
+    );
+    if (!ids.length) return;
+
+    button.disabled = true;
+    document.getElementById('select-all').disabled = true;
+    var applied = 0, noIsbn = 0, noMatch = 0;
+
+    for (var i = 0; i < ids.length; i++) {
+      statusEl.textContent = 'Actualizando ' + (i + 1) + ' de ' + ids.length + '...';
+      try {
+        var res = await fetch('/books/' + ids[i] + '/refill', { method: 'POST' });
+        var data = await res.json();
+        if (data.applied) applied++;
+        else if (data.reason === 'no_isbn') noIsbn++;
+        else noMatch++;
+      } catch (e) {
+        noMatch++;
+      }
+    }
+
+    statusEl.textContent = '✅ ' + applied + ' actualizados'
+      + (noMatch ? ', ' + noMatch + ' sin resultados' : '')
+      + (noIsbn ? ', ' + noIsbn + ' sin ISBN' : '') + '.';
+    await reloadResults();
+    button.disabled = false;
+    document.getElementById('select-all').disabled = false;
+    updateBulkBar();
+  });
+
   function exitSelectMode() {
     document.body.classList.remove('select-mode');
     document.getElementById('bulk-bar').hidden = true;
     document.getElementById('select-toggle').textContent = 'Seleccionar';
     document.getElementById('bulk-location').value = '';
     document.getElementById('bulk-borrower').value = '';
+    document.getElementById('bulk-refill-status').textContent = '';
+    document.getElementById('select-all').disabled = false;
     setBulkMode('location');
     document.querySelectorAll('#results input[name="book_ids"]:checked').forEach(function (cb) {
       cb.checked = false;

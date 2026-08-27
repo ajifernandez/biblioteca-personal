@@ -426,6 +426,54 @@ def bulk_create_loan():
     return render_template("partials/_book_list.html", books=find_books(q, field), view=view)
 
 
+def lookup_isbn_external(isbn):
+    info = None
+    for _, _, provider in LOOKUP_PROVIDERS:
+        if provider is None:
+            continue
+        result = provider(isbn)
+        if not result:
+            continue
+        if info is None:
+            info = result
+        elif not info["cover_url"] and result["cover_url"]:
+            info["cover_url"] = result["cover_url"]
+        if info["cover_url"]:
+            break
+    return info
+
+
+@app.route("/books/<int:book_id>/refill", methods=["POST"])
+def refill_book(book_id):
+    db = get_db()
+    book = db.execute("SELECT * FROM books WHERE id = ?", (book_id,)).fetchone()
+    if not book:
+        return jsonify({"applied": False, "reason": "not_found"}), 404
+    if not book["isbn"]:
+        return jsonify({"applied": False, "reason": "no_isbn"})
+
+    info = lookup_isbn_external(book["isbn"])
+    if not info:
+        return jsonify({"applied": False, "reason": "no_match"})
+
+    db.execute(
+        """UPDATE books SET
+           title=?, author=?, publisher=?, published_year=?, cover_url=?, description=?
+           WHERE id=?""",
+        (
+            info["title"] or book["title"],
+            info["author"] or book["author"],
+            info["publisher"] or book["publisher"],
+            info["published_year"] or book["published_year"],
+            info["cover_url"] or book["cover_url"],
+            info["description"] or book["description"],
+            book_id,
+        ),
+    )
+    db.commit()
+    return jsonify({"applied": True, "source": info["source"]})
+
+
 @app.route("/scan")
 def scan():
     return render_template("scan.html")
