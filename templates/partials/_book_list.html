@@ -42,6 +42,7 @@
               {% else %}
                 <span class="tag tag-success">Disponible</span>
               {% endif %}
+              {% if book.reading_started_at %}<span class="tag">📖 Leyendo</span>{% endif %}
             </td>
             <td class="muted">{{ book.isbn or "—" }}</td>
           </tr>
@@ -70,6 +71,7 @@
             {% else %}
               <span class="tag tag-success">Disponible</span>
             {% endif %}
+            {% if book.reading_started_at %}<span class="tag">📖 Leyendo</span>{% endif %}
             {% if book.location %}<span class="tag">📍 {{ book.location }}</span>{% endif %}
             {% if book.isbn %}<span class="tag">{{ book.isbn }}</span>{% endif %}
           </div>

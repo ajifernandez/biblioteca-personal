@@ -16,6 +16,7 @@
       {% else %}
         <span class="tag tag-success">Disponible</span>
       {% endif %}
+      {% if current_reading %}<span class="tag">📖 Leyendo</span>{% endif %}
       {% if book.location %}<span class="tag">📍 {{ book.location }}</span>{% endif %}
       {% if book.isbn %}<span class="tag">{{ book.isbn }}</span>{% endif %}
     </div>
@@ -137,6 +138,11 @@
 <form method="post" action="{{ url_for('delete_book', book_id=book.id) }}" onsubmit="return confirm('¿Eliminar este libro?');" style="margin-bottom: 1.5rem;">
   <button type="submit" class="btn btn-danger">🗑 Eliminar libro</button>
 </form>
+
+<h2 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">Lecturas</h2>
+<div id="reading">
+  {% include "partials/_reading.html" %}
+</div>
 
 <h2 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">Préstamos</h2>
 <div id="loans">

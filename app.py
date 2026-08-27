@@ -327,9 +327,11 @@ def index():
 
 
 SELECT_BOOKS_SQL = """
-    SELECT b.*, l.borrower_name AS current_borrower, l.loaned_at AS current_loaned_at
+    SELECT b.*, l.borrower_name AS current_borrower, l.loaned_at AS current_loaned_at,
+           r.started_at AS reading_started_at
     FROM books b
     LEFT JOIN loans l ON l.book_id = b.id AND l.returned_at IS NULL
+    LEFT JOIN reading_entries r ON r.book_id = b.id AND r.finished_at IS NULL
 """
 
 
@@ -586,6 +588,27 @@ def render_loans_partial(book_id):
     )
 
 
+def render_reading_partial(book_id):
+    db = get_db()
+    book = db.execute("SELECT * FROM books WHERE id = ?", (book_id,)).fetchone()
+    current_reading = db.execute(
+        "SELECT * FROM reading_entries "
+        "WHERE book_id = ? AND finished_at IS NULL "
+        "ORDER BY started_at DESC LIMIT 1",
+        (book_id,),
+    ).fetchone()
+    reading_entries = db.execute(
+        "SELECT * FROM reading_entries WHERE book_id = ? ORDER BY started_at DESC, id DESC",
+        (book_id,),
+    ).fetchall()
+    return render_template(
+        "partials/_reading.html",
+        book=book,
+        current_reading=current_reading,
+        reading_entries=reading_entries,
+    )
+
+
 @app.route("/books/<int:book_id>")
 def book_detail(book_id):
     db = get_db()
@@ -602,11 +625,23 @@ def book_detail(book_id):
         "SELECT * FROM loans WHERE book_id = ? ORDER BY loaned_at DESC, id DESC",
         (book_id,),
     ).fetchall()
+    current_reading = db.execute(
+        "SELECT * FROM reading_entries "
+        "WHERE book_id = ? AND finished_at IS NULL "
+        "ORDER BY started_at DESC LIMIT 1",
+        (book_id,),
+    ).fetchone()
+    reading_entries = db.execute(
+        "SELECT * FROM reading_entries WHERE book_id = ? ORDER BY started_at DESC, id DESC",
+        (book_id,),
+    ).fetchall()
     return render_template(
         "book_detail.html",
         book=book,
         current_loan=current_loan,
         loans=loans,
+        current_reading=current_reading,
+        reading_entries=reading_entries,
     )
 
 
@@ -710,6 +745,57 @@ def return_loan(book_id, loan_id):
     )
     db.commit()
     return render_loans_partial(book_id)
+
+
+@app.route("/books/<int:book_id>/reading", methods=["POST"])
+def create_reading(book_id):
+    db = get_db()
+    book = db.execute("SELECT id FROM books WHERE id = ?", (book_id,)).fetchone()
+    if not book:
+        return "Libro no encontrado", 404
+
+    current_reading = db.execute(
+        "SELECT id FROM reading_entries WHERE book_id = ? AND finished_at IS NULL LIMIT 1",
+        (book_id,),
+    ).fetchone()
+    if current_reading:
+        return "Ya estás leyendo este libro", 400
+
+    started_at = request.form.get("started_at", "").strip() or datetime.now().strftime(
+        "%Y-%m-%d"
+    )
+    db.execute(
+        "INSERT INTO reading_entries (book_id, started_at) VALUES (?, ?)",
+        (book_id, started_at),
+    )
+    db.commit()
+    return render_reading_partial(book_id)
+
+
+@app.route("/books/<int:book_id>/reading/<int:entry_id>/finish", methods=["POST"])
+def finish_reading(book_id, entry_id):
+    db = get_db()
+    entry = db.execute(
+        "SELECT * FROM reading_entries WHERE id = ? AND book_id = ?",
+        (entry_id, book_id),
+    ).fetchone()
+    if not entry:
+        return "Lectura no encontrada", 404
+
+    finished_at = request.form.get("finished_at", "").strip() or datetime.now().strftime(
+        "%Y-%m-%d"
+    )
+    rating = request.form.get("rating", type=int)
+    if rating is not None and not 1 <= rating <= 5:
+        rating = None
+    notes = request.form.get("notes", "").strip()
+    db.execute(
+        "UPDATE reading_entries SET finished_at = ?, rating = ?, notes = ? "
+        "WHERE id = ? AND book_id = ?",
+        (finished_at, rating, notes, entry_id, book_id),
+    )
+    db.commit()
+    return render_reading_partial(book_id)
 
 
 with app.app_context():

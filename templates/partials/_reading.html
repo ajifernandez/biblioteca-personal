@@ -1,0 +1,63 @@
+<div class="card">
+  {% if current_reading %}
+    <div class="loan-current">
+      <span class="tag">📖 Leyendo</span>
+      <p class="muted">Empezado el {{ current_reading.started_at }}</p>
+    </div>
+    <form hx-post="{{ url_for('finish_reading', book_id=book.id, entry_id=current_reading.id) }}" hx-target="#reading" hx-swap="innerHTML">
+      <div class="form-grid">
+        <div class="field">
+          <label>Fecha de fin</label>
+          <input type="date" name="finished_at">
+        </div>
+        <div class="field">
+          <label>Valoración</label>
+          <select name="rating">
+            <option value="">Sin valorar</option>
+            <option value="5">★★★★★</option>
+            <option value="4">★★★★☆</option>
+            <option value="3">★★★☆☆</option>
+            <option value="2">★★☆☆☆</option>
+            <option value="1">★☆☆☆☆</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label>Notas</label>
+          <textarea name="notes" rows="2" placeholder="Qué te ha parecido..."></textarea>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">✅ Marcar como terminado</button>
+    </form>
+  {% else %}
+    <form hx-post="{{ url_for('create_reading', book_id=book.id) }}" hx-target="#reading" hx-swap="innerHTML">
+      <div class="form-grid">
+        <div class="field full">
+          <label>Fecha de inicio</label>
+          <input type="date" name="started_at">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">📖 Empezar a leer</button>
+    </form>
+  {% endif %}
+</div>
+
+{% if not reading_entries %}
+  <div class="empty-state">
+    <div class="icon">📖</div>
+    <p>Sin lecturas registradas todavía.</p>
+  </div>
+{% else %}
+  <div class="timeline">
+    {% for entry in reading_entries %}
+      <div class="timeline-entry {{ 'reading' if not entry.finished_at }}">
+        {% if entry.finished_at %}
+          <div class="dates">{{ entry.started_at }} → {{ entry.finished_at }}</div>
+          {% if entry.rating %}<div class="stars">{{ '★' * entry.rating }}{{ '☆' * (5 - entry.rating) }}</div>{% endif %}
+        {% else %}
+          <div class="dates">Leyendo desde {{ entry.started_at }}</div>
+        {% endif %}
+        {% if entry.notes %}<div class="notes">{{ entry.notes }}</div>{% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
