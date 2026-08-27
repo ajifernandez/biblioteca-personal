@@ -26,6 +26,19 @@ con Tailscale (más abajo) para tener HTTPS válido también en pruebas.
 `ssl_context="adhoc"`, pero varios navegadores móviles se quedan colgados negociando
 TLS con ese certificado por no incluir SAN — no es fiable, mejor usar Tailscale.)
 
+## API key de Google Books (recomendado)
+
+Sin clave, las búsquedas de ISBN comparten una cuota pública muy baja que se agota
+enseguida (verás muchos "no encontrado" que en realidad son error 429 de cuota).
+Con una API key gratuita el límite sube muchísimo.
+
+1. Crea una clave en https://console.cloud.google.com/apis/credentials (habilita
+   "Google Books API" en el proyecto).
+2. Expórtala como `GOOGLE_BOOKS_API_KEY` antes de levantar el contenedor:
+   - Docker Compose: crea un fichero `.env` junto a `docker-compose.yml` con
+     `GOOGLE_BOOKS_API_KEY=tu-clave` (docker compose lo lee automáticamente).
+   - Dockge: añade la variable en la sección "Environment Variables" del stack.
+
 ## Despliegue en casa (Raspberry Pi / NAS / mini PC)
 
 ```bash

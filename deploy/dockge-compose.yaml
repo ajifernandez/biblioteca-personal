@@ -3,12 +3,16 @@
 # el código fuente en el host de Dockge.
 services:
   biblioteca:
+    image: biblioteca-personal:local
+    pull_policy: build
     build:
-      context: https://github.com/ajifernandez/biblioteca-personal.git
+      context: https://github.com/ajifernandez/biblioteca-personal.git#master
     container_name: biblioteca_personal
     restart: unless-stopped
     ports:
       - "5000:5000"
+    environment:
+      - GOOGLE_BOOKS_API_KEY=${GOOGLE_BOOKS_API_KEY:-}
     volumes:
       - biblioteca_data:/data
 

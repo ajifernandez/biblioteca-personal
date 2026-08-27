@@ -182,33 +182,6 @@ def lookup_open_library_search(isbn):
     return None
 
 
-def lookup_isbndb(isbn):
-    api_key = os.environ.get("ISBNDB_API_KEY")
-    if not api_key:
-        return None
-
-    try:
-        r = requests.get(
-            f"https://api2.isbndb.com/book/{isbn}",
-            headers={"Authorization": api_key},
-            timeout=5,
-        )
-        r.raise_for_status()
-        book = r.json().get("book") or {}
-        return make_book_info(
-            title=book.get("title", ""),
-            author=", ".join(book.get("authors") or []),
-            publisher=book.get("publisher", ""),
-            published_year=book.get("date_published", ""),
-            cover_url=book.get("image", ""),
-            description=book.get("synopsis", ""),
-            source="ISBNdb",
-        )
-    except requests.RequestException:
-        pass
-    return None
-
-
 def make_isbn_search_links(isbn):
     query = quote_plus(f"ISBN {isbn}")
     return [
@@ -225,7 +198,6 @@ def lookup_isbn(isbn):
         lookup_google_books,
         lookup_open_library_books,
         lookup_open_library_search,
-        lookup_isbndb,
     ):
         info = provider(isbn)
         if info:
@@ -295,11 +267,27 @@ def scan():
     return render_template("scan.html")
 
 
+def lookup_local_book(isbn):
+    db = get_db()
+    row = db.execute("SELECT * FROM books WHERE isbn = ?", (isbn,)).fetchone()
+    if not row:
+        return None
+    return make_book_info(
+        title=row["title"],
+        author=row["author"] or "",
+        publisher=row["publisher"] or "",
+        published_year=row["published_year"] or "",
+        cover_url=row["cover_url"] or "",
+        description=row["description"] or "",
+        source="Biblioteca",
+    )
+
+
 @app.route("/api/lookup/<isbn>")
 def api_lookup(isbn):
     isbn = "".join(c for c in isbn if c.isalnum())
     search_links = make_isbn_search_links(isbn)
-    info = lookup_isbn(isbn)
+    info = lookup_local_book(isbn) or lookup_isbn(isbn)
     if not info:
         return jsonify({"found": False, "isbn": isbn, "search_links": search_links})
     info["found"] = True
