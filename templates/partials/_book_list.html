@@ -27,7 +27,7 @@
             </td>
             <td>
               {% if book.cover_url %}
-                <img class="table-cover" src="{{ book.cover_url }}" alt="">
+                <img class="table-cover" src="{{ book.cover_url }}" alt="" loading="lazy" decoding="async">
               {% else %}
                 <div class="table-cover table-cover-placeholder">📕</div>
               {% endif %}
@@ -58,7 +58,7 @@
           <input type="checkbox" name="book_ids" value="{{ book.id }}" onclick="event.stopPropagation()" aria-label="Seleccionar {{ book.title }}">
         </span>
         {% if book.cover_url %}
-          <img class="book-cover" src="{{ book.cover_url }}" alt="">
+          <img class="book-cover" src="{{ book.cover_url }}" alt="" loading="lazy" decoding="async">
         {% else %}
           <div class="book-cover" style="display:flex;align-items:center;justify-content:center;font-size:1.5rem;">📕</div>
         {% endif %}
