@@ -108,6 +108,10 @@
   applyViewButtons();
   reloadResults();
 
+  document.body.addEventListener('htmx:afterSwap', function (e) {
+    if (e.detail.target && e.detail.target.id === 'results') updateBulkBar();
+  });
+
   document.addEventListener('click', function (e) {
     var row = e.target.closest('.book-row');
     if (!row || document.body.classList.contains('select-mode') || row.tagName !== 'TR') return;
@@ -199,7 +203,8 @@
     var active = document.body.classList.toggle('select-mode');
     document.getElementById('bulk-bar').hidden = !active;
     this.textContent = active ? 'Cancelar selección' : 'Seleccionar';
-    if (!active) exitSelectMode();
+    if (active) updateBulkBar();
+    else exitSelectMode();
   });
 
   document.getElementById('bulk-cancel').addEventListener('click', exitSelectMode);
