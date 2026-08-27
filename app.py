@@ -210,56 +210,76 @@ def index():
     return render_template("index.html")
 
 
+SELECT_BOOKS_SQL = """
+    SELECT b.*, l.borrower_name AS current_borrower, l.loaned_at AS current_loaned_at
+    FROM books b
+    LEFT JOIN loans l ON l.book_id = b.id AND l.returned_at IS NULL
+"""
+
+
+def find_books(q, field):
+    db = get_db()
+    if not q:
+        return db.execute(f"{SELECT_BOOKS_SQL} ORDER BY b.added_at DESC").fetchall()
+
+    like = f"%{q}%"
+    if field == "titulo":
+        return db.execute(
+            f"{SELECT_BOOKS_SQL} WHERE b.title LIKE ? ORDER BY b.title",
+            (like,),
+        ).fetchall()
+    if field == "autor":
+        return db.execute(
+            f"{SELECT_BOOKS_SQL} WHERE b.author LIKE ? ORDER BY b.author",
+            (like,),
+        ).fetchall()
+    if field == "isbn":
+        return db.execute(
+            f"{SELECT_BOOKS_SQL} WHERE b.isbn LIKE ? ORDER BY b.title",
+            (like,),
+        ).fetchall()
+    if field == "ubicacion":
+        return db.execute(
+            f"{SELECT_BOOKS_SQL} WHERE b.location LIKE ? ORDER BY b.title",
+            (like,),
+        ).fetchall()
+    if field == "prestado":
+        return db.execute(
+            f"{SELECT_BOOKS_SQL} WHERE l.borrower_name LIKE ? ORDER BY l.loaned_at DESC",
+            (like,),
+        ).fetchall()
+    return db.execute(
+        f"""{SELECT_BOOKS_SQL}
+           WHERE b.title LIKE ? OR b.author LIKE ? OR b.isbn LIKE ?
+              OR b.location LIKE ? OR l.borrower_name LIKE ?
+           ORDER BY b.added_at DESC""",
+        (like, like, like, like, like),
+    ).fetchall()
+
+
 @app.route("/search")
 def search():
     q = request.args.get("q", "").strip()
     field = request.args.get("field", "todo")
+    return render_template("partials/_book_list.html", books=find_books(q, field))
+
+
+@app.route("/books/bulk-location", methods=["POST"])
+def bulk_update_location():
     db = get_db()
-    select_books = """
-        SELECT b.*, l.borrower_name AS current_borrower, l.loaned_at AS current_loaned_at
-        FROM books b
-        LEFT JOIN loans l ON l.book_id = b.id AND l.returned_at IS NULL
-    """
+    book_ids = [b for b in request.form.getlist("book_ids") if b.isdigit()]
+    location = request.form.get("location", "").strip()
+    if book_ids:
+        placeholders = ",".join("?" for _ in book_ids)
+        db.execute(
+            f"UPDATE books SET location = ? WHERE id IN ({placeholders})",
+            [location, *book_ids],
+        )
+        db.commit()
 
-    if not q:
-        rows = db.execute(f"{select_books} ORDER BY b.added_at DESC").fetchall()
-    else:
-        like = f"%{q}%"
-        if field == "titulo":
-            rows = db.execute(
-                f"{select_books} WHERE b.title LIKE ? ORDER BY b.title",
-                (like,),
-            ).fetchall()
-        elif field == "autor":
-            rows = db.execute(
-                f"{select_books} WHERE b.author LIKE ? ORDER BY b.author",
-                (like,),
-            ).fetchall()
-        elif field == "isbn":
-            rows = db.execute(
-                f"{select_books} WHERE b.isbn LIKE ? ORDER BY b.title",
-                (like,),
-            ).fetchall()
-        elif field == "ubicacion":
-            rows = db.execute(
-                f"{select_books} WHERE b.location LIKE ? ORDER BY b.title",
-                (like,),
-            ).fetchall()
-        elif field == "prestado":
-            rows = db.execute(
-                f"{select_books} WHERE l.borrower_name LIKE ? ORDER BY l.loaned_at DESC",
-                (like,),
-            ).fetchall()
-        else:
-            rows = db.execute(
-                f"""{select_books}
-                   WHERE b.title LIKE ? OR b.author LIKE ? OR b.isbn LIKE ?
-                      OR b.location LIKE ? OR l.borrower_name LIKE ?
-                   ORDER BY b.added_at DESC""",
-                (like, like, like, like, like),
-            ).fetchall()
-
-    return render_template("partials/_book_list.html", books=rows)
+    q = request.form.get("q", "").strip()
+    field = request.form.get("field", "todo")
+    return render_template("partials/_book_list.html", books=find_books(q, field))
 
 
 @app.route("/scan")

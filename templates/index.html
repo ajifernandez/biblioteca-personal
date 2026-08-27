@@ -5,20 +5,89 @@
   <p>Busca por título, ISBN, autor, ubicación o persona que tiene un préstamo.</p>
 </div>
 
-<form class="search-card" hx-get="{{ url_for('search') }}" hx-target="#results" hx-trigger="input changed delay:300ms from:input, change from:select">
-  <span class="search-icon">🔍</span>
-  <input type="text" name="q" placeholder="Buscar..." autofocus>
-  <select name="field">
-    <option value="todo">Todo</option>
-    <option value="titulo">Título</option>
-    <option value="autor">Autor</option>
-    <option value="isbn">ISBN</option>
-    <option value="ubicacion">Ubicación</option>
-    <option value="prestado">Prestado a</option>
-  </select>
-</form>
-
-<div id="results" hx-get="{{ url_for('search') }}" hx-trigger="load">
-  <div class="empty-state pulse"><div class="icon">📖</div><p>Cargando tu biblioteca...</p></div>
+<div class="toolbar-row">
+  <form class="search-card" hx-get="{{ url_for('search') }}" hx-target="#results" hx-trigger="input changed delay:300ms from:input, change from:select">
+    <span class="search-icon">🔍</span>
+    <input type="text" name="q" placeholder="Buscar..." autofocus>
+    <select name="field">
+      <option value="todo">Todo</option>
+      <option value="titulo">Título</option>
+      <option value="autor">Autor</option>
+      <option value="isbn">ISBN</option>
+      <option value="ubicacion">Ubicación</option>
+      <option value="prestado">Prestado a</option>
+    </select>
+  </form>
+  <button type="button" id="select-toggle" class="btn btn-ghost">Seleccionar</button>
 </div>
+
+<div id="bulk-bar" class="bulk-bar" hidden>
+  <span id="bulk-count">0 seleccionados</span>
+  <input type="text" id="bulk-location" name="location" placeholder="Nueva ubicación (vacío para borrarla)">
+  <button
+    type="button"
+    id="bulk-apply"
+    class="btn btn-primary"
+    disabled
+    hx-post="{{ url_for('bulk_update_location') }}"
+    hx-target="#results"
+    hx-include="#page-scope, #bulk-location, .search-card input[name='q'], .search-card select[name='field']"
+    hx-on::after-request="exitSelectMode()"
+  >Aplicar ubicación</button>
+  <button type="button" id="bulk-cancel" class="btn btn-ghost">Cancelar</button>
+</div>
+
+<div id="page-scope">
+  <div id="results" hx-get="{{ url_for('search') }}" hx-trigger="load">
+    <div class="empty-state pulse"><div class="icon">📖</div><p>Cargando tu biblioteca...</p></div>
+  </div>
+</div>
+
+<script>
+  function updateBulkBar() {
+    var n = document.querySelectorAll('#results input[name="book_ids"]:checked').length;
+    document.getElementById('bulk-count').textContent = n + (n === 1 ? ' seleccionado' : ' seleccionados');
+    document.getElementById('bulk-apply').disabled = n === 0;
+  }
+
+  function exitSelectMode() {
+    document.body.classList.remove('select-mode');
+    document.getElementById('bulk-bar').hidden = true;
+    document.getElementById('select-toggle').textContent = 'Seleccionar';
+    document.querySelectorAll('#results input[name="book_ids"]:checked').forEach(function (cb) {
+      cb.checked = false;
+    });
+    document.querySelectorAll('.book-card.selected').forEach(function (c) {
+      c.classList.remove('selected');
+    });
+    updateBulkBar();
+  }
+
+  document.getElementById('select-toggle').addEventListener('click', function () {
+    var active = document.body.classList.toggle('select-mode');
+    document.getElementById('bulk-bar').hidden = !active;
+    this.textContent = active ? 'Cancelar selección' : 'Seleccionar';
+    if (!active) exitSelectMode();
+  });
+
+  document.getElementById('bulk-cancel').addEventListener('click', exitSelectMode);
+
+  document.addEventListener('click', function (e) {
+    if (!document.body.classList.contains('select-mode')) return;
+    var card = e.target.closest('.book-card');
+    if (!card) return;
+    e.preventDefault();
+    var checkbox = card.querySelector('input[name="book_ids"]');
+    checkbox.checked = !checkbox.checked;
+    card.classList.toggle('selected', checkbox.checked);
+    updateBulkBar();
+  });
+
+  document.addEventListener('change', function (e) {
+    if (!e.target || e.target.name !== 'book_ids') return;
+    var card = e.target.closest('.book-card');
+    if (card) card.classList.toggle('selected', e.target.checked);
+    updateBulkBar();
+  });
+</script>
 {% endblock %}
