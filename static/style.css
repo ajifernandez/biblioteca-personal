@@ -207,9 +207,38 @@ body {
   color: var(--primary-hover);
   white-space: nowrap;
 }
-#bulk-location {
+
+.bulk-tabs {
+  display: flex;
+  gap: 0.3rem;
+}
+.bulk-tab {
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.4rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.bulk-tab.active {
+  background: var(--bg-elevated);
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+}
+
+.bulk-action {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   flex: 1;
-  min-width: 160px;
+  min-width: 220px;
+}
+.bulk-action input {
+  flex: 1;
+  min-width: 140px;
   font-family: inherit;
   font-size: 16px; /* evita zoom automático al enfocar en iOS Safari */
   padding: 0.55rem 0.75rem;
@@ -219,8 +248,8 @@ body {
   color: var(--text);
   outline: none;
 }
-#bulk-apply:disabled { opacity: 0.5; cursor: not-allowed; }
-#bulk-apply:disabled:hover { box-shadow: var(--shadow-sm); transform: none; }
+.bulk-action button:disabled { opacity: 0.5; cursor: not-allowed; }
+.bulk-action button:disabled:hover { box-shadow: var(--shadow-sm); transform: none; }
 
 /* Book grid */
 .book-grid {

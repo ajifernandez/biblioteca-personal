@@ -22,19 +22,41 @@
 </div>
 
 <div id="bulk-bar" class="bulk-bar" hidden>
+  <div class="bulk-tabs">
+    <button type="button" class="bulk-tab active" data-mode="location">📍 Ubicación</button>
+    <button type="button" class="bulk-tab" data-mode="loan">🤝 Préstamo</button>
+  </div>
   <button type="button" id="select-all" class="btn btn-ghost">Seleccionar todo</button>
   <span id="bulk-count">0 de 0 seleccionados</span>
-  <input type="text" id="bulk-location" name="location" placeholder="Nueva ubicación (vacío para borrarla)">
-  <button
-    type="button"
-    id="bulk-apply"
-    class="btn btn-primary"
-    disabled
-    hx-post="{{ url_for('bulk_update_location') }}"
-    hx-target="#results"
-    hx-include="#page-scope, #bulk-location, .search-card input[name='q'], .search-card select[name='field']"
-    hx-on::after-request="exitSelectMode()"
-  >Aplicar ubicación</button>
+
+  <div class="bulk-action" data-mode="location">
+    <input type="text" id="bulk-location" name="location" placeholder="Nueva ubicación (vacío para borrarla)">
+    <button
+      type="button"
+      id="bulk-apply-location"
+      class="btn btn-primary"
+      disabled
+      hx-post="{{ url_for('bulk_update_location') }}"
+      hx-target="#results"
+      hx-include="#page-scope, #bulk-location, .search-card input[name='q'], .search-card select[name='field']"
+      hx-on::after-request="exitSelectMode()"
+    >Aplicar ubicación</button>
+  </div>
+
+  <div class="bulk-action" data-mode="loan" hidden>
+    <input type="text" id="bulk-borrower" name="borrower_name" placeholder="Nombre de la persona">
+    <button
+      type="button"
+      id="bulk-apply-loan"
+      class="btn btn-primary"
+      disabled
+      hx-post="{{ url_for('bulk_create_loan') }}"
+      hx-target="#results"
+      hx-include="#page-scope, #bulk-borrower, .search-card input[name='q'], .search-card select[name='field']"
+      hx-on::after-request="exitSelectMode()"
+    >Prestar</button>
+  </div>
+
   <button type="button" id="bulk-cancel" class="btn btn-ghost">Cancelar</button>
 </div>
 
@@ -49,15 +71,35 @@
     var boxes = document.querySelectorAll('#results input[name="book_ids"]');
     var n = Array.prototype.filter.call(boxes, function (cb) { return cb.checked; }).length;
     document.getElementById('bulk-count').textContent = n + ' de ' + boxes.length + ' seleccionados';
-    document.getElementById('bulk-apply').disabled = n === 0;
+    document.getElementById('bulk-apply-location').disabled = n === 0;
+    document.getElementById('bulk-apply-loan').disabled =
+      n === 0 || document.getElementById('bulk-borrower').value.trim() === '';
     document.getElementById('select-all').textContent =
       boxes.length > 0 && n === boxes.length ? 'Deseleccionar todo' : 'Seleccionar todo';
   }
+
+  function setBulkMode(mode) {
+    document.querySelectorAll('.bulk-tab').forEach(function (tab) {
+      tab.classList.toggle('active', tab.dataset.mode === mode);
+    });
+    document.querySelectorAll('.bulk-action').forEach(function (group) {
+      group.hidden = group.dataset.mode !== mode;
+    });
+  }
+
+  document.querySelectorAll('.bulk-tab').forEach(function (tab) {
+    tab.addEventListener('click', function () { setBulkMode(tab.dataset.mode); });
+  });
+
+  document.getElementById('bulk-borrower').addEventListener('input', updateBulkBar);
 
   function exitSelectMode() {
     document.body.classList.remove('select-mode');
     document.getElementById('bulk-bar').hidden = true;
     document.getElementById('select-toggle').textContent = 'Seleccionar';
+    document.getElementById('bulk-location').value = '';
+    document.getElementById('bulk-borrower').value = '';
+    setBulkMode('location');
     document.querySelectorAll('#results input[name="book_ids"]:checked').forEach(function (cb) {
       cb.checked = false;
     });

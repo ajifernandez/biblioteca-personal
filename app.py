@@ -282,6 +282,31 @@ def bulk_update_location():
     return render_template("partials/_book_list.html", books=find_books(q, field))
 
 
+@app.route("/books/bulk-loan", methods=["POST"])
+def bulk_create_loan():
+    db = get_db()
+    book_ids = [b for b in request.form.getlist("book_ids") if b.isdigit()]
+    borrower_name = request.form.get("borrower_name", "").strip()
+    if book_ids and borrower_name:
+        already_loaned = {
+            row["book_id"]
+            for row in db.execute(
+                "SELECT book_id FROM loans WHERE returned_at IS NULL"
+            ).fetchall()
+        }
+        loaned_at = datetime.now().strftime("%Y-%m-%d")
+        to_loan = [b for b in book_ids if int(b) not in already_loaned]
+        db.executemany(
+            "INSERT INTO loans (book_id, borrower_name, loaned_at) VALUES (?, ?, ?)",
+            [(book_id, borrower_name, loaned_at) for book_id in to_loan],
+        )
+        db.commit()
+
+    q = request.form.get("q", "").strip()
+    field = request.form.get("field", "todo")
+    return render_template("partials/_book_list.html", books=find_books(q, field))
+
+
 @app.route("/scan")
 def scan():
     return render_template("scan.html")
