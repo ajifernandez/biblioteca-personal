@@ -185,8 +185,8 @@ body {
 .toolbar-row {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  margin-bottom: 1.25rem;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 .toolbar-row .search-card { flex: 1; margin-bottom: 0; }
 
@@ -194,12 +194,12 @@ body {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.5rem;
   background: var(--primary-soft);
   border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
   border-radius: var(--radius);
-  padding: 0.7rem 1rem;
-  margin-bottom: 1.25rem;
+  padding: 0.55rem 0.75rem;
+  margin-bottom: 0.75rem;
 }
 #bulk-count {
   font-weight: 700;
