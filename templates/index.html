@@ -2,7 +2,7 @@
 {% block content %}
 <div class="page-header">
   <h1>Tu biblioteca</h1>
-  <p>Busca por título, autor, código de barras o ubicación.</p>
+  <p>Busca por título, ISBN, autor, ubicación o persona que tiene un préstamo.</p>
 </div>
 
 <form class="search-card" hx-get="{{ url_for('search') }}" hx-target="#results" hx-trigger="input changed delay:300ms from:input, change from:select">
@@ -12,8 +12,9 @@
     <option value="todo">Todo</option>
     <option value="titulo">Título</option>
     <option value="autor">Autor</option>
-    <option value="isbn">Código de barras</option>
+    <option value="isbn">ISBN</option>
     <option value="ubicacion">Ubicación</option>
+    <option value="prestado">Prestado a</option>
   </select>
 </form>
 

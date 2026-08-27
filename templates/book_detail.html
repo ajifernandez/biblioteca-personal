@@ -11,6 +11,11 @@
     <p class="author-line">{{ book.author or "Autor desconocido" }}{% if book.published_year %} · {{ book.published_year }}{% endif %}</p>
     {% if book.publisher %}<p class="author-line">{{ book.publisher }}</p>{% endif %}
     <div>
+      {% if current_loan %}
+        <span class="tag tag-warning">🤝 Prestado a {{ current_loan.borrower_name }}</span>
+      {% else %}
+        <span class="tag tag-success">Disponible</span>
+      {% endif %}
       {% if book.location %}<span class="tag">📍 {{ book.location }}</span>{% endif %}
       {% if book.isbn %}<span class="tag">{{ book.isbn }}</span>{% endif %}
     </div>
@@ -73,8 +78,8 @@
   <button type="submit" class="btn btn-danger">🗑 Eliminar libro</button>
 </form>
 
-<h2 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">Historial de lectura</h2>
-<div id="history">
-  {% include "partials/_history.html" %}
+<h2 style="font-size:1.1rem; font-weight:700; margin-bottom:0.75rem;">Préstamos</h2>
+<div id="loans">
+  {% include "partials/_loans.html" %}
 </div>
 {% endblock %}

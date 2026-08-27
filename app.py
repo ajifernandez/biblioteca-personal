@@ -132,33 +132,48 @@ def search():
     q = request.args.get("q", "").strip()
     field = request.args.get("field", "todo")
     db = get_db()
+    select_books = """
+        SELECT b.*, l.borrower_name AS current_borrower, l.loaned_at AS current_loaned_at
+        FROM books b
+        LEFT JOIN loans l ON l.book_id = b.id AND l.returned_at IS NULL
+    """
 
     if not q:
-        rows = db.execute("SELECT * FROM books ORDER BY added_at DESC").fetchall()
+        rows = db.execute(f"{select_books} ORDER BY b.added_at DESC").fetchall()
     else:
         like = f"%{q}%"
         if field == "titulo":
             rows = db.execute(
-                "SELECT * FROM books WHERE title LIKE ? ORDER BY title", (like,)
+                f"{select_books} WHERE b.title LIKE ? ORDER BY b.title",
+                (like,),
             ).fetchall()
         elif field == "autor":
             rows = db.execute(
-                "SELECT * FROM books WHERE author LIKE ? ORDER BY author", (like,)
+                f"{select_books} WHERE b.author LIKE ? ORDER BY b.author",
+                (like,),
             ).fetchall()
         elif field == "isbn":
             rows = db.execute(
-                "SELECT * FROM books WHERE isbn LIKE ?", (like,)
+                f"{select_books} WHERE b.isbn LIKE ? ORDER BY b.title",
+                (like,),
             ).fetchall()
         elif field == "ubicacion":
             rows = db.execute(
-                "SELECT * FROM books WHERE location LIKE ?", (like,)
+                f"{select_books} WHERE b.location LIKE ? ORDER BY b.title",
+                (like,),
+            ).fetchall()
+        elif field == "prestado":
+            rows = db.execute(
+                f"{select_books} WHERE l.borrower_name LIKE ? ORDER BY l.loaned_at DESC",
+                (like,),
             ).fetchall()
         else:
             rows = db.execute(
-                """SELECT * FROM books
-                   WHERE title LIKE ? OR author LIKE ? OR isbn LIKE ? OR location LIKE ?
-                   ORDER BY added_at DESC""",
-                (like, like, like, like),
+                f"""{select_books}
+                   WHERE b.title LIKE ? OR b.author LIKE ? OR b.isbn LIKE ?
+                      OR b.location LIKE ? OR l.borrower_name LIKE ?
+                   ORDER BY b.added_at DESC""",
+                (like, like, like, like, like),
             ).fetchall()
 
     return render_template("partials/_book_list.html", books=rows)
@@ -188,10 +203,13 @@ def create_book():
     if not title:
         return "El título es obligatorio", 400
 
-    cover_url = save_cover_upload(request.files.get("cover_file")) or request.form.get("cover_url", "").strip()
+    cover_url = save_cover_upload(request.files.get("cover_file")) or request.form.get(
+        "cover_url", ""
+    ).strip()
 
     cur = db.execute(
-        """INSERT INTO books (isbn, title, author, publisher, published_year, cover_url, description, location)
+        """INSERT INTO books
+           (isbn, title, author, publisher, published_year, cover_url, description, location)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(isbn) DO UPDATE SET location = excluded.location
            RETURNING id""",
@@ -211,23 +229,57 @@ def create_book():
     return redirect(url_for("book_detail", book_id=book_id))
 
 
+def render_loans_partial(book_id):
+    db = get_db()
+    book = db.execute("SELECT * FROM books WHERE id = ?", (book_id,)).fetchone()
+    current_loan = db.execute(
+        "SELECT * FROM loans "
+        "WHERE book_id = ? AND returned_at IS NULL "
+        "ORDER BY loaned_at DESC LIMIT 1",
+        (book_id,),
+    ).fetchone()
+    loans = db.execute(
+        "SELECT * FROM loans WHERE book_id = ? ORDER BY loaned_at DESC, id DESC",
+        (book_id,),
+    ).fetchall()
+    return render_template(
+        "partials/_loans.html",
+        book=book,
+        current_loan=current_loan,
+        loans=loans,
+    )
+
+
 @app.route("/books/<int:book_id>")
 def book_detail(book_id):
     db = get_db()
     book = db.execute("SELECT * FROM books WHERE id = ?", (book_id,)).fetchone()
     if not book:
         return "Libro no encontrado", 404
-    history = db.execute(
-        "SELECT * FROM reading_log WHERE book_id = ? ORDER BY started_at DESC",
+    current_loan = db.execute(
+        "SELECT * FROM loans "
+        "WHERE book_id = ? AND returned_at IS NULL "
+        "ORDER BY loaned_at DESC LIMIT 1",
+        (book_id,),
+    ).fetchone()
+    loans = db.execute(
+        "SELECT * FROM loans WHERE book_id = ? ORDER BY loaned_at DESC, id DESC",
         (book_id,),
     ).fetchall()
-    return render_template("book_detail.html", book=book, history=history)
+    return render_template(
+        "book_detail.html",
+        book=book,
+        current_loan=current_loan,
+        loans=loans,
+    )
 
 
 @app.route("/books/<int:book_id>", methods=["POST"])
 def update_book(book_id):
     db = get_db()
-    existing = db.execute("SELECT cover_url FROM books WHERE id = ?", (book_id,)).fetchone()
+    existing = db.execute(
+        "SELECT cover_url FROM books WHERE id = ?", (book_id,)
+    ).fetchone()
     if not existing:
         return "Libro no encontrado", 404
 
@@ -238,7 +290,8 @@ def update_book(book_id):
     )
 
     db.execute(
-        """UPDATE books SET title=?, author=?, publisher=?, published_year=?, location=?, cover_url=?
+        """UPDATE books SET
+           title=?, author=?, publisher=?, published_year=?, location=?, cover_url=?
            WHERE id=?""",
         (
             request.form.get("title", "").strip(),
@@ -262,46 +315,58 @@ def delete_book(book_id):
     return redirect(url_for("index"))
 
 
-@app.route("/books/<int:book_id>/history", methods=["POST"])
-def add_history(book_id):
+@app.route("/books/<int:book_id>/loans", methods=["POST"])
+def create_loan(book_id):
     db = get_db()
-    status = request.form.get("status")
-    today = datetime.now().strftime("%Y-%m-%d")
+    book = db.execute("SELECT id FROM books WHERE id = ?", (book_id,)).fetchone()
+    if not book:
+        return "Libro no encontrado", 404
 
-    if status == "leyendo":
-        db.execute(
-            "INSERT INTO reading_log (book_id, status, started_at) VALUES (?, 'leyendo', ?)",
-            (book_id, today),
-        )
-    elif status == "leido":
-        open_entry = db.execute(
-            "SELECT id FROM reading_log "
-            "WHERE book_id = ? AND status = 'leyendo' AND finished_at IS NULL "
-            "ORDER BY started_at DESC LIMIT 1",
-            (book_id,),
-        ).fetchone()
-        rating = request.form.get("rating") or None
-        notes = request.form.get("notes", "").strip()
-        if open_entry:
-            db.execute(
-                "UPDATE reading_log SET status='leido', finished_at=?, rating=?, notes=? WHERE id=?",
-                (today, rating, notes, open_entry["id"]),
-            )
-        else:
-            db.execute(
-                "INSERT INTO reading_log "
-                "(book_id, status, started_at, finished_at, rating, notes) "
-                "VALUES (?, 'leido', ?, ?, ?, ?)",
-                (book_id, today, today, rating, notes),
-            )
-    db.commit()
-
-    book = db.execute("SELECT * FROM books WHERE id = ?", (book_id,)).fetchone()
-    history = db.execute(
-        "SELECT * FROM reading_log WHERE book_id = ? ORDER BY started_at DESC",
+    current_loan = db.execute(
+        "SELECT id FROM loans WHERE book_id = ? AND returned_at IS NULL LIMIT 1",
         (book_id,),
-    ).fetchall()
-    return render_template("partials/_history.html", book=book, history=history)
+    ).fetchone()
+    if current_loan:
+        return "Este libro ya está prestado", 400
+
+    borrower_name = request.form.get("borrower_name", "").strip()
+    if not borrower_name:
+        return "El nombre de la persona es obligatorio", 400
+
+    loaned_at = request.form.get("loaned_at", "").strip() or datetime.now().strftime(
+        "%Y-%m-%d"
+    )
+    notes = request.form.get("notes", "").strip()
+    db.execute(
+        """INSERT INTO loans (book_id, borrower_name, loaned_at, notes)
+           VALUES (?, ?, ?, ?)""",
+        (book_id, borrower_name, loaned_at, notes),
+    )
+    db.commit()
+    return render_loans_partial(book_id)
+
+
+@app.route("/books/<int:book_id>/loans/<int:loan_id>/return", methods=["POST"])
+def return_loan(book_id, loan_id):
+    db = get_db()
+    loan = db.execute(
+        "SELECT * FROM loans WHERE id = ? AND book_id = ?",
+        (loan_id, book_id),
+    ).fetchone()
+    if not loan:
+        return "Préstamo no encontrado", 404
+
+    returned_at = request.form.get("returned_at", "").strip() or datetime.now().strftime(
+        "%Y-%m-%d"
+    )
+    return_notes = request.form.get("return_notes", "").strip()
+    db.execute(
+        "UPDATE loans SET returned_at = ?, return_notes = ? "
+        "WHERE id = ? AND book_id = ?",
+        (returned_at, return_notes, loan_id, book_id),
+    )
+    db.commit()
+    return render_loans_partial(book_id)
 
 
 with app.app_context():

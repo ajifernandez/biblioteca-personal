@@ -11,16 +11,19 @@ CREATE TABLE IF NOT EXISTS books (
     added_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE TABLE IF NOT EXISTS reading_log (
+CREATE TABLE IF NOT EXISTS loans (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
-    status TEXT NOT NULL CHECK (status IN ('leyendo', 'leido')),
-    started_at TEXT,
-    finished_at TEXT,
-    rating INTEGER CHECK (rating BETWEEN 1 AND 5),
-    notes TEXT
+    borrower_name TEXT NOT NULL,
+    loaned_at TEXT NOT NULL,
+    returned_at TEXT,
+    notes TEXT,
+    return_notes TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_books_title ON books(title);
 CREATE INDEX IF NOT EXISTS idx_books_author ON books(author);
-CREATE INDEX IF NOT EXISTS idx_reading_log_book ON reading_log(book_id);
+CREATE INDEX IF NOT EXISTS idx_books_isbn ON books(isbn);
+CREATE INDEX IF NOT EXISTS idx_loans_book ON loans(book_id);
+CREATE INDEX IF NOT EXISTS idx_loans_borrower ON loans(borrower_name);

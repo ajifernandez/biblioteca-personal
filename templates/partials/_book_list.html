@@ -17,6 +17,11 @@
           <h3>{{ book.title }}</h3>
           <p class="author">{{ book.author or "Autor desconocido" }}{% if book.published_year %} · {{ book.published_year }}{% endif %}</p>
           <div>
+            {% if book.current_borrower %}
+              <span class="tag tag-warning">🤝 Prestado a {{ book.current_borrower }}</span>
+            {% else %}
+              <span class="tag tag-success">Disponible</span>
+            {% endif %}
             {% if book.location %}<span class="tag">📍 {{ book.location }}</span>{% endif %}
             {% if book.isbn %}<span class="tag">{{ book.isbn }}</span>{% endif %}
           </div>
