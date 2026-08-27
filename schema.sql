@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS books (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    isbn TEXT UNIQUE,
+    isbn TEXT,
     title TEXT NOT NULL,
     author TEXT,
     publisher TEXT,

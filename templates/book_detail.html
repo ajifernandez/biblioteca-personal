@@ -19,9 +19,25 @@
       {% if current_reading %}<span class="tag">📖 Leyendo</span>{% endif %}
       {% if book.location %}<span class="tag">📍 {{ book.location }}</span>{% endif %}
       {% if book.isbn %}<span class="tag">{{ book.isbn }}</span>{% endif %}
+      {% if copies|length > 1 %}<span class="tag">📚 {{ copies|length }} ejemplares</span>{% endif %}
     </div>
   </div>
 </div>
+
+{% if copies|length > 1 %}
+  <div class="card">
+    <p style="font-weight:700; margin: 0 0 0.6rem;">📚 {{ copies|length }} ejemplares de este libro</p>
+    <div>
+      {% for copy in copies %}
+        {% if copy.id == book.id %}
+          <span class="tag tag-success">📍 {{ copy.location or "N/A" }} (este)</span>
+        {% else %}
+          <a class="tag" href="{{ url_for('book_detail', book_id=copy.id) }}">📍 {{ copy.location or "N/A" }}</a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+{% endif %}
 
 <details class="editor">
   <summary>Editar datos</summary>

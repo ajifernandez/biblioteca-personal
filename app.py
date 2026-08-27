@@ -72,9 +72,38 @@ def close_db(exception=None):
         db.close()
 
 
+def migrate_drop_isbn_unique(conn):
+    """Libros con el mismo ISBN pueden representar varios ejemplares físicos,
+    así que la restricción UNIQUE original sobre isbn ya no aplica."""
+    row = conn.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='books'"
+    ).fetchone()
+    if not row or "UNIQUE" not in row[0]:
+        return
+    conn.executescript("""
+        CREATE TABLE books_new (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            isbn TEXT,
+            title TEXT NOT NULL,
+            author TEXT,
+            publisher TEXT,
+            published_year TEXT,
+            cover_url TEXT,
+            description TEXT,
+            location TEXT,
+            added_at TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        INSERT INTO books_new SELECT * FROM books;
+        DROP TABLE books;
+        ALTER TABLE books_new RENAME TO books;
+    """)
+    conn.commit()
+
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
+    migrate_drop_isbn_unique(conn)
     with open(SCHEMA_PATH) as f:
         conn.executescript(f.read())
     conn.close()
@@ -549,7 +578,6 @@ def create_book():
         """INSERT INTO books
            (isbn, title, author, publisher, published_year, cover_url, description, location)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-           ON CONFLICT(isbn) DO UPDATE SET location = excluded.location
            RETURNING id""",
         (
             isbn,
@@ -635,6 +663,14 @@ def book_detail(book_id):
         "SELECT * FROM reading_entries WHERE book_id = ? ORDER BY started_at DESC, id DESC",
         (book_id,),
     ).fetchall()
+    copies = (
+        db.execute(
+            "SELECT id, location FROM books WHERE isbn = ? ORDER BY added_at",
+            (book["isbn"],),
+        ).fetchall()
+        if book["isbn"]
+        else []
+    )
     return render_template(
         "book_detail.html",
         book=book,
@@ -642,6 +678,7 @@ def book_detail(book_id):
         loans=loans,
         current_reading=current_reading,
         reading_entries=reading_entries,
+        copies=copies,
     )
 
 
@@ -661,26 +698,23 @@ def update_book(book_id):
     )
     isbn = request.form.get("isbn", "").strip() or None
 
-    try:
-        db.execute(
-            """UPDATE books SET
-               isbn=?, title=?, author=?, publisher=?, published_year=?,
-               location=?, cover_url=?, description=?
-               WHERE id=?""",
-            (
-                isbn,
-                request.form.get("title", "").strip(),
-                request.form.get("author", "").strip(),
-                request.form.get("publisher", "").strip(),
-                request.form.get("published_year", "").strip(),
-                request.form.get("location", "").strip(),
-                cover_url,
-                request.form.get("description", "").strip(),
-                book_id,
-            ),
-        )
-    except sqlite3.IntegrityError:
-        return "Ese ISBN ya está en otro libro de la biblioteca", 400
+    db.execute(
+        """UPDATE books SET
+           isbn=?, title=?, author=?, publisher=?, published_year=?,
+           location=?, cover_url=?, description=?
+           WHERE id=?""",
+        (
+            isbn,
+            request.form.get("title", "").strip(),
+            request.form.get("author", "").strip(),
+            request.form.get("publisher", "").strip(),
+            request.form.get("published_year", "").strip(),
+            request.form.get("location", "").strip(),
+            cover_url,
+            request.form.get("description", "").strip(),
+            book_id,
+        ),
+    )
     db.commit()
     return redirect(url_for("book_detail", book_id=book_id))
 

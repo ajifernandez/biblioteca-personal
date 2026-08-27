@@ -419,7 +419,9 @@ body.select-mode .row-select-cell { display: table-cell; }
   background: var(--primary-soft);
   color: var(--primary-hover);
   margin: 0 0.3rem 0.25rem 0;
+  text-decoration: none;
 }
+a.tag:hover { background: color-mix(in srgb, var(--primary) 22%, var(--primary-soft)); }
 .tag-success { color: #047857; background: color-mix(in srgb, var(--success) 14%, transparent); }
 .tag-warning { color: #b45309; background: color-mix(in srgb, var(--accent) 18%, transparent); }
 
