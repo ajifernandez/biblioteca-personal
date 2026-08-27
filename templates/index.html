@@ -22,6 +22,7 @@
 </div>
 
 <div id="bulk-bar" class="bulk-bar" hidden>
+  <button type="button" id="select-all" class="btn btn-ghost">Seleccionar todo</button>
   <span id="bulk-count">0 seleccionados</span>
   <input type="text" id="bulk-location" name="location" placeholder="Nueva ubicación (vacío para borrarla)">
   <button
@@ -45,9 +46,12 @@
 
 <script>
   function updateBulkBar() {
-    var n = document.querySelectorAll('#results input[name="book_ids"]:checked').length;
+    var boxes = document.querySelectorAll('#results input[name="book_ids"]');
+    var n = Array.prototype.filter.call(boxes, function (cb) { return cb.checked; }).length;
     document.getElementById('bulk-count').textContent = n + (n === 1 ? ' seleccionado' : ' seleccionados');
     document.getElementById('bulk-apply').disabled = n === 0;
+    document.getElementById('select-all').textContent =
+      boxes.length > 0 && n === boxes.length ? 'Deseleccionar todo' : 'Seleccionar todo';
   }
 
   function exitSelectMode() {
@@ -71,6 +75,17 @@
   });
 
   document.getElementById('bulk-cancel').addEventListener('click', exitSelectMode);
+
+  document.getElementById('select-all').addEventListener('click', function () {
+    var boxes = document.querySelectorAll('#results input[name="book_ids"]');
+    var allChecked = boxes.length > 0 && Array.prototype.every.call(boxes, function (cb) { return cb.checked; });
+    boxes.forEach(function (cb) {
+      cb.checked = !allChecked;
+      var card = cb.closest('.book-card');
+      if (card) card.classList.toggle('selected', cb.checked);
+    });
+    updateBulkBar();
+  });
 
   document.addEventListener('click', function (e) {
     if (!document.body.classList.contains('select-mode')) return;
