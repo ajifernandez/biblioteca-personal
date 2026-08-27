@@ -367,6 +367,10 @@ body.select-mode .book-select { display: block; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.table-status-cell {
+  white-space: nowrap;
+}
+.table-status-cell .tag { margin-bottom: 0; }
 .row-select-cell { display: none; width: 2.2rem; }
 body.select-mode .row-select-cell { display: table-cell; }
 .row-select-cell input[type="checkbox"] {
