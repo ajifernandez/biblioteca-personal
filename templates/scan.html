@@ -127,7 +127,14 @@
   });
 
   function stopScanner() {
-    reader.stop().catch(() => {});
+    try {
+      var state = reader.getState();
+      if (state === Html5QrcodeScannerState.SCANNING || state === Html5QrcodeScannerState.PAUSED) {
+        reader.stop().catch(() => {});
+      }
+    } catch (e) {
+      // el lector ya estaba parado
+    }
   }
 
   function showSearchLinks(links) {
