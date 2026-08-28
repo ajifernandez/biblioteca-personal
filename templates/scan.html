@@ -10,6 +10,12 @@
   Guardado automático (si se encuentra título, guarda y sigue escaneando)
 </label>
 
+<div class="field full" style="max-width:380px; margin:0 auto 1rem;">
+  <label>Ubicación de los libros que vas a escanear</label>
+  <input type="text" name="location" id="f-location" form="book-form" list="location-suggestions" placeholder="ej. Salón, estante 2">
+  <datalist id="location-suggestions"></datalist>
+</div>
+
 <div class="scan-frame" id="scan-frame">
   <div id="reader"></div>
 </div>
@@ -17,7 +23,16 @@
 <div class="lookup-links" id="isbn-search-links" style="display:none;"></div>
 <div style="text-align:center; margin-bottom:1.5rem;">
   <button id="restart-scan" class="btn btn-ghost" style="display:none;">🔄 Escanear otro</button>
+  <button id="manual-isbn-btn" type="button" class="btn btn-ghost">✏️ Escribir ISBN a mano</button>
 </div>
+
+<form id="manual-isbn-form" class="card" style="display:none;">
+  <div class="field full">
+    <label>ISBN</label>
+    <input type="text" id="manual-isbn-input" inputmode="numeric" placeholder="Ej. 9788420412146">
+  </div>
+  <button type="submit" class="btn btn-primary btn-block">Buscar</button>
+</form>
 
 <form id="book-form" class="card" method="post" action="{{ url_for('create_book') }}" enctype="multipart/form-data" style="display:none;">
   <div class="form-grid">
@@ -40,11 +55,6 @@
     <div class="field">
       <label>Año</label>
       <input type="text" name="published_year" id="f-year">
-    </div>
-    <div class="field">
-      <label>Ubicación</label>
-      <input type="text" name="location" id="f-location" list="location-suggestions" placeholder="ej. Salón, estante 2">
-      <datalist id="location-suggestions"></datalist>
     </div>
     <div class="field full">
       <label>Portada</label>
@@ -69,6 +79,9 @@
   const status = document.getElementById("scan-status");
   const form = document.getElementById("book-form");
   const restartBtn = document.getElementById("restart-scan");
+  const manualBtn = document.getElementById("manual-isbn-btn");
+  const manualForm = document.getElementById("manual-isbn-form");
+  const manualInput = document.getElementById("manual-isbn-input");
   const searchLinks = document.getElementById("isbn-search-links");
   const coverFile = document.getElementById("f-cover-file");
   const coverUrlInput = document.getElementById("f-cover");
@@ -141,6 +154,9 @@
   function startScanner() {
     frame.style.display = "block";
     restartBtn.style.display = "none";
+    manualBtn.style.display = "inline-flex";
+    manualForm.style.display = "none";
+    manualInput.value = "";
     form.style.display = "none";
     showSearchLinks([]);
     status.className = "scan-status pulse";
@@ -167,6 +183,8 @@
     stopScanner();
     frame.style.display = "none";
     restartBtn.style.display = "inline-flex";
+    manualBtn.style.display = "none";
+    manualForm.style.display = "none";
     status.className = "scan-status active";
     status.textContent = `Código detectado: ${isbn}. Buscando información...`;
 
@@ -213,6 +231,26 @@
   }
 
   restartBtn.addEventListener("click", startScanner);
+
+  manualBtn.addEventListener("click", () => {
+    stopScanner();
+    frame.style.display = "none";
+    manualBtn.style.display = "none";
+    restartBtn.style.display = "inline-flex";
+    manualForm.style.display = "block";
+    status.className = "scan-status";
+    status.textContent = "Escribe el ISBN que aparece impreso en el libro.";
+    manualInput.focus();
+  });
+
+  manualForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const isbn = manualInput.value.trim();
+    if (!isbn) return;
+    manualForm.style.display = "none";
+    onScanSuccess(isbn);
+  });
+
   startScanner();
 </script>
 {% endblock %}
