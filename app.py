@@ -9,7 +9,9 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from urllib.parse import quote_plus, unquote
 
+import pytesseract
 import requests
+from PIL import Image
 from flask import (
     Flask,
     Response,
@@ -702,6 +704,37 @@ def api_lookup_provider(provider_id, isbn):
 def api_isbn_search_links(isbn):
     isbn = "".join(c for c in isbn if c.isalnum())
     return jsonify(make_isbn_search_links(isbn))
+
+
+def guess_title_from_ocr_text(text):
+    """Heurística simple: la línea alfabética más larga suele ser el título
+    en la portada de un libro (letra más grande que autor/editorial)."""
+    candidates = [
+        line.strip()
+        for line in text.splitlines()
+        if len(line.strip()) >= 3 and any(c.isalpha() for c in line)
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=len)
+
+
+@app.route("/api/ocr-cover", methods=["POST"])
+def ocr_cover():
+    photo = request.files.get("photo")
+    if not photo or not photo.filename:
+        return jsonify({"error": "no_photo"}), 400
+
+    try:
+        image = Image.open(photo.stream).convert("L")
+        text = pytesseract.image_to_string(image, lang="spa+eng")
+    except pytesseract.TesseractNotFoundError:
+        return jsonify({"error": "ocr_unavailable"}), 503
+    except Exception:
+        return jsonify({"error": "ocr_failed"}), 422
+
+    text = text.strip()
+    return jsonify({"text": text, "title_guess": guess_title_from_ocr_text(text)})
 
 
 @app.route("/books", methods=["POST"])

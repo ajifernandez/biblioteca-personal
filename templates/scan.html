@@ -24,6 +24,8 @@
 <div style="text-align:center; margin-bottom:1.5rem;">
   <button id="restart-scan" class="btn btn-ghost" style="display:none;">🔄 Escanear otro</button>
   <button id="manual-isbn-btn" type="button" class="btn btn-ghost">✏️ Escribir ISBN a mano</button>
+  <button id="cover-photo-btn" type="button" class="btn btn-ghost">📷 Foto de portada (sin ISBN)</button>
+  <input type="file" id="cover-photo-input" accept="image/*" capture="environment" style="display:none;">
 </div>
 
 <form id="manual-isbn-form" class="card" style="display:none;">
@@ -82,6 +84,8 @@
   const manualBtn = document.getElementById("manual-isbn-btn");
   const manualForm = document.getElementById("manual-isbn-form");
   const manualInput = document.getElementById("manual-isbn-input");
+  const coverPhotoBtn = document.getElementById("cover-photo-btn");
+  const coverPhotoInput = document.getElementById("cover-photo-input");
   const searchLinks = document.getElementById("isbn-search-links");
   const coverFile = document.getElementById("f-cover-file");
   const coverUrlInput = document.getElementById("f-cover");
@@ -164,6 +168,8 @@
     manualBtn.style.display = "inline-flex";
     manualForm.style.display = "none";
     manualInput.value = "";
+    coverPhotoBtn.style.display = "inline-flex";
+    coverPhotoInput.value = "";
     form.style.display = "none";
     showSearchLinks([]);
     status.className = "scan-status pulse";
@@ -192,6 +198,7 @@
     restartBtn.style.display = "inline-flex";
     manualBtn.style.display = "none";
     manualForm.style.display = "none";
+    coverPhotoBtn.style.display = "none";
     status.className = "scan-status active";
     status.textContent = `Código detectado: ${isbn}. Buscando información...`;
 
@@ -256,6 +263,79 @@
     if (!isbn) return;
     manualForm.style.display = "none";
     onScanSuccess(isbn);
+  });
+
+  function resizeImageFile(file, maxDim, quality) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob); else reject(new Error("resize failed"));
+        }, "image/jpeg", quality);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("load failed")); };
+      img.src = url;
+    });
+  }
+
+  function setCoverFile(blob, filename) {
+    const file = new File([blob], filename, { type: blob.type });
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    coverFile.files = dt.files;
+    showCoverPreview(URL.createObjectURL(file));
+  }
+
+  coverPhotoBtn.addEventListener("click", () => {
+    coverPhotoInput.click();
+  });
+
+  coverPhotoInput.addEventListener("change", async () => {
+    const file = coverPhotoInput.files[0];
+    if (!file) return;
+
+    stopScanner();
+    frame.style.display = "none";
+    manualBtn.style.display = "none";
+    manualForm.style.display = "none";
+    coverPhotoBtn.style.display = "none";
+    restartBtn.style.display = "inline-flex";
+    status.className = "scan-status active";
+    status.textContent = "📷 Procesando foto de portada...";
+
+    try {
+      const resized = await resizeImageFile(file, 1000, 0.82);
+      setCoverFile(resized, "portada.jpg");
+
+      const formData = new FormData();
+      formData.append("photo", resized, "portada.jpg");
+      const res = await fetch("/api/ocr-cover", { method: "POST", body: formData });
+      const data = await res.json();
+
+      document.getElementById("f-isbn").value = "";
+      if (data.title_guess) document.getElementById("f-title").value = data.title_guess;
+      if (data.text) document.getElementById("f-description").value = data.text;
+
+      if (data.title_guess) {
+        status.textContent = "✅ Título detectado en la foto. Revisa y corrige si hace falta.";
+      } else if (data.error === "ocr_unavailable") {
+        status.textContent = "El reconocimiento de texto no está disponible en el servidor. Rellena los datos a mano.";
+      } else {
+        status.textContent = "No se pudo leer el título automáticamente. Rellena los datos a mano.";
+      }
+    } catch (e) {
+      status.textContent = "Error procesando la foto. Rellena los datos a mano.";
+    }
+    form.style.display = "block";
   });
 
   startScanner();
