@@ -557,6 +557,30 @@ a.tag:hover { background: color-mix(in srgb, var(--primary) 22%, var(--primary-s
 }
 .scan-status.active { color: var(--primary); font-weight: 600; }
 
+.scan-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 1.5rem;
+}
+.scan-overlay-inner {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+}
+.scan-overlay-inner .scan-frame { margin-bottom: 1rem; }
+.scan-overlay-inner .scan-status { color: #fff; }
+.scan-overlay-close {
+  position: absolute;
+  top: -3rem;
+  right: 0;
+  color: #fff;
+}
+
 .lookup-links {
   text-align: center;
   margin: -0.5rem 0 1.25rem;

@@ -17,6 +17,7 @@
       <option value="ubicacion">Ubicación</option>
       <option value="prestado">Prestado a</option>
     </select>
+    <button type="button" id="search-scan-btn" class="btn btn-ghost" title="Escanear código de barras para buscar">📷</button>
   </form>
   <div class="view-toggle">
     <button type="button" id="view-grid-btn" class="btn btn-ghost" title="Vista en cuadrícula">🔲</button>
@@ -78,6 +79,14 @@
   </div>
 </div>
 
+<div id="scan-overlay" class="scan-overlay" hidden>
+  <div class="scan-overlay-inner">
+    <button type="button" id="scan-overlay-close" class="btn btn-ghost scan-overlay-close" aria-label="Cerrar">✕</button>
+    <div class="scan-frame" id="search-scan-frame"><div id="search-reader"></div></div>
+    <p class="scan-status" id="search-scan-status">Iniciando cámara...</p>
+  </div>
+</div>
+
 <script>
   function currentView() {
     return localStorage.getItem('bookView') || 'grid';
@@ -101,6 +110,61 @@
     applyViewButtons();
     reloadResults();
   }
+
+  var scanOverlay = document.getElementById('scan-overlay');
+  var scanOverlayStatus = document.getElementById('search-scan-status');
+  var qrLibPromise = null;
+  var searchReader = null;
+
+  function loadQrLib() {
+    if (qrLibPromise) return qrLibPromise;
+    qrLibPromise = new Promise(function (resolve, reject) {
+      if (window.Html5Qrcode) return resolve();
+      var script = document.createElement('script');
+      script.src = 'https://unpkg.com/html5-qrcode';
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+    return qrLibPromise;
+  }
+
+  function closeScanOverlay() {
+    scanOverlay.hidden = true;
+    if (searchReader) {
+      searchReader.stop().catch(function () {});
+      searchReader = null;
+    }
+  }
+
+  function onSearchScanSuccess(isbn) {
+    closeScanOverlay();
+    var qInput = document.querySelector('.search-card input[name="q"]');
+    var fieldSelect = document.querySelector('.search-card select[name="field"]');
+    qInput.value = isbn;
+    fieldSelect.value = 'isbn';
+    reloadResults();
+  }
+
+  function openScanOverlay() {
+    scanOverlay.hidden = false;
+    scanOverlayStatus.textContent = 'Iniciando cámara...';
+    loadQrLib().then(function () {
+      searchReader = new Html5Qrcode('search-reader', { formatsToSupport: [Html5QrcodeSupportedFormats.EAN_13] });
+      return searchReader.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 250, height: 120 } },
+        onSearchScanSuccess
+      );
+    }).then(function () {
+      scanOverlayStatus.textContent = 'Buscando código de barras...';
+    }).catch(function () {
+      scanOverlayStatus.textContent = 'No se pudo acceder a la cámara.';
+    });
+  }
+
+  document.getElementById('search-scan-btn').addEventListener('click', openScanOverlay);
+  document.getElementById('scan-overlay-close').addEventListener('click', closeScanOverlay);
 
   document.getElementById('view-grid-btn').addEventListener('click', function () { setView('grid'); });
   document.getElementById('view-table-btn').addEventListener('click', function () { setView('table'); });
