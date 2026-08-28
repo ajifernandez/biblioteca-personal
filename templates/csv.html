@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h1>Exportar / Importar</h1>
+  <p>Copia de seguridad de tu biblioteca en formato CSV.</p>
+</div>
+
+{% if error %}
+  <div class="card" style="border-color: var(--danger, #c0392b); color: var(--danger, #c0392b);">
+    {{ error }}
+  </div>
+{% elif imported %}
+  <div class="card">
+    ✅ Importación completa: {{ inserted }} libros añadidos, {{ updated }} actualizados{% if skipped and skipped != '0' %}, {{ skipped }} filas omitidas por no tener título{% endif %}.
+  </div>
+{% endif %}
+
+<div class="card">
+  <h2 style="margin-top:0;">Exportar</h2>
+  <p>Descarga todos tus libros en un archivo CSV.</p>
+  <a class="btn btn-primary" href="{{ url_for('export_csv') }}">⬇️ Descargar CSV</a>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Importar</h2>
+  <p>
+    Sube un CSV con las columnas <code>id, isbn, title, author, publisher,
+    published_year, location, cover_url, description</code>.
+    Las filas con <code>id</code> existente actualizan ese libro; el resto se añaden como nuevos.
+    El único campo obligatorio es <code>title</code>.
+  </p>
+  <form method="post" action="{{ url_for('import_csv') }}" enctype="multipart/form-data">
+    <input type="file" name="csv_file" accept=".csv,text/csv" required>
+    <button type="submit" class="btn btn-primary" style="margin-top:0.75rem;">⬆️ Importar CSV</button>
+  </form>
+</div>
+{% endblock %}

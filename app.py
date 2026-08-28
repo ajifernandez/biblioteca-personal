@@ -1,3 +1,5 @@
+import csv
+import io
 import json
 import os
 import re
@@ -8,7 +10,17 @@ from datetime import datetime
 from urllib.parse import quote_plus, unquote
 
 import requests
-from flask import Flask, g, jsonify, redirect, render_template, request, send_from_directory, url_for
+from flask import (
+    Flask,
+    Response,
+    g,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    send_from_directory,
+    url_for,
+)
 
 DB_PATH = os.environ.get("DB_PATH", "/data/biblioteca.db")
 SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "schema.sql")
@@ -378,6 +390,107 @@ def api_locations():
            ORDER BY loc COLLATE NOCASE"""
     ).fetchall()
     return jsonify([row["loc"] for row in rows])
+
+
+CSV_FIELDS = [
+    "id",
+    "isbn",
+    "title",
+    "author",
+    "publisher",
+    "published_year",
+    "location",
+    "cover_url",
+    "description",
+]
+
+
+@app.route("/csv")
+def csv_page():
+    return render_template(
+        "csv.html",
+        imported=request.args.get("imported"),
+        inserted=request.args.get("inserted"),
+        updated=request.args.get("updated"),
+        skipped=request.args.get("skipped"),
+        error=request.args.get("error"),
+    )
+
+
+@app.route("/export.csv")
+def export_csv():
+    db = get_db()
+    rows = db.execute("SELECT * FROM books ORDER BY id").fetchall()
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=CSV_FIELDS)
+    writer.writeheader()
+    for row in rows:
+        writer.writerow({field: row[field] for field in CSV_FIELDS})
+    return Response(
+        buf.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=biblioteca.csv"},
+    )
+
+
+@app.route("/import-csv", methods=["POST"])
+def import_csv():
+    file = request.files.get("csv_file")
+    if not file or not file.filename:
+        return redirect(url_for("csv_page", error="Selecciona un archivo CSV"))
+
+    try:
+        stream = io.StringIO(file.stream.read().decode("utf-8-sig"))
+        reader = csv.DictReader(stream)
+    except (UnicodeDecodeError, csv.Error):
+        return redirect(url_for("csv_page", error="No se pudo leer el archivo CSV"))
+
+    db = get_db()
+    inserted = 0
+    updated = 0
+    skipped = 0
+    for row in reader:
+        title = (row.get("title") or "").strip()
+        if not title:
+            skipped += 1
+            continue
+
+        values = (
+            (row.get("isbn") or "").strip() or None,
+            title,
+            (row.get("author") or "").strip(),
+            (row.get("publisher") or "").strip(),
+            (row.get("published_year") or "").strip(),
+            (row.get("location") or "").strip(),
+            (row.get("cover_url") or "").strip(),
+            (row.get("description") or "").strip(),
+        )
+        book_id = (row.get("id") or "").strip()
+        existing = (
+            db.execute("SELECT id FROM books WHERE id = ?", (book_id,)).fetchone()
+            if book_id
+            else None
+        )
+        if existing:
+            db.execute(
+                """UPDATE books SET isbn=?, title=?, author=?, publisher=?,
+                       published_year=?, location=?, cover_url=?, description=?
+                   WHERE id=?""",
+                (*values, book_id),
+            )
+            updated += 1
+        else:
+            db.execute(
+                """INSERT INTO books
+                       (isbn, title, author, publisher, published_year, location, cover_url, description)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                values,
+            )
+            inserted += 1
+    db.commit()
+    return redirect(
+        url_for("csv_page", imported=1, inserted=inserted, updated=updated, skipped=skipped)
+    )
 
 
 SELECT_BOOKS_SQL = """

@@ -204,6 +204,7 @@ body {
   border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
 }
 
+.bulk-bar[hidden] { display: none; }
 .bulk-bar {
   display: flex;
   align-items: center;
@@ -243,6 +244,7 @@ body {
   border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
 }
 
+.bulk-action[hidden] { display: none; }
 .bulk-action {
   display: flex;
   align-items: center;
@@ -567,6 +569,7 @@ a.tag:hover { background: color-mix(in srgb, var(--primary) 22%, var(--primary-s
   z-index: 100;
   padding: 1.5rem;
 }
+.scan-overlay[hidden] { display: none; }
 .scan-overlay-inner {
   position: relative;
   width: 100%;
