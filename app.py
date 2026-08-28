@@ -621,6 +621,8 @@ def create_book():
     )
     book_id = cur.fetchone()["id"]
     db.commit()
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({"ok": True, "book_id": book_id})
     return redirect(url_for("book_detail", book_id=book_id))
 
 

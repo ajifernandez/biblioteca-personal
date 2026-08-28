@@ -5,6 +5,11 @@
   <p>Apunta la cámara al código ISBN de la contraportada.</p>
 </div>
 
+<label class="autosave-toggle" style="display:flex; align-items:center; gap:0.5rem; justify-content:center; margin-bottom:1rem;">
+  <input type="checkbox" id="autosave-toggle">
+  Guardado automático (si se encuentra título, guarda y sigue escaneando)
+</label>
+
 <div class="scan-frame" id="scan-frame">
   <div id="reader"></div>
 </div>
@@ -70,6 +75,12 @@
   const coverPreview = document.getElementById("cover-preview");
   const locationInput = document.getElementById("f-location");
   const locationSuggestions = document.getElementById("location-suggestions");
+  const autosaveToggle = document.getElementById("autosave-toggle");
+
+  autosaveToggle.checked = localStorage.getItem("autosaveEnabled") === "1";
+  autosaveToggle.addEventListener("change", () => {
+    localStorage.setItem("autosaveEnabled", autosaveToggle.checked ? "1" : "0");
+  });
 
   const lastLocation = localStorage.getItem("lastLocation");
   if (lastLocation) locationInput.value = lastLocation;
@@ -141,6 +152,17 @@
     );
   }
 
+  async function autoSaveBook() {
+    const formData = new FormData(form);
+    const res = await fetch(form.action, {
+      method: "POST",
+      body: formData,
+      headers: { "X-Requested-With": "XMLHttpRequest" },
+    });
+    if (!res.ok) throw new Error("save failed");
+    return res.json();
+  }
+
   async function onScanSuccess(isbn) {
     stopScanner();
     frame.style.display = "none";
@@ -163,9 +185,22 @@
         document.getElementById("f-cover").value = data.cover_url || "";
         document.getElementById("f-description").value = data.description || "";
         showCoverPreview(data.cover_url || "");
-        status.textContent = data.source
-          ? `✅ Libro encontrado en ${data.source}. Revisa los datos y añade la ubicación.`
-          : "✅ Libro encontrado. Revisa los datos y añade la ubicación.";
+
+        if (autosaveToggle.checked && data.title) {
+          status.textContent = "💾 Guardando automáticamente...";
+          try {
+            await autoSaveBook();
+            status.textContent = `✅ Guardado: ${data.title}`;
+            setTimeout(startScanner, 900);
+            return;
+          } catch (e) {
+            status.textContent = "Error al guardar automáticamente. Revisa los datos y guarda a mano.";
+          }
+        } else {
+          status.textContent = data.source
+            ? `✅ Libro encontrado en ${data.source}. Revisa los datos y añade la ubicación.`
+            : "✅ Libro encontrado. Revisa los datos y añade la ubicación.";
+        }
       } else {
         status.textContent = "No se encontró información automática. "
           + "Puedes buscar el ISBN fuera y rellenar los datos a mano.";
