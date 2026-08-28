@@ -9,15 +9,15 @@
   <form class="search-card" hx-get="{{ url_for('search') }}" hx-target="#results" hx-trigger="input changed delay:300ms from:input, change from:select" hx-vals="js:{view: currentView()}">
     <span class="search-icon">🔍</span>
     <input type="text" name="q" placeholder="Buscar..." autofocus>
-    <select name="field">
+    <select name="field" id="search-field">
       <option value="todo">Todo</option>
       <option value="titulo">Título</option>
       <option value="autor">Autor</option>
       <option value="isbn">ISBN</option>
       <option value="ubicacion">Ubicación</option>
       <option value="prestado">Prestado a</option>
+      <option value="scan">📷 Escanear ISBN</option>
     </select>
-    <button type="button" id="search-scan-btn" class="btn btn-ghost" title="Escanear código de barras para buscar">📷</button>
   </form>
   <div class="view-toggle">
     <button type="button" id="view-grid-btn" class="btn btn-ghost" title="Vista en cuadrícula">🔲</button>
@@ -140,9 +140,9 @@
   function onSearchScanSuccess(isbn) {
     closeScanOverlay();
     var qInput = document.querySelector('.search-card input[name="q"]');
-    var fieldSelect = document.querySelector('.search-card select[name="field"]');
-    qInput.value = isbn;
     fieldSelect.value = 'isbn';
+    lastFieldValue = 'isbn';
+    qInput.value = isbn;
     reloadResults();
   }
 
@@ -163,8 +163,19 @@
     });
   }
 
-  document.getElementById('search-scan-btn').addEventListener('click', openScanOverlay);
   document.getElementById('scan-overlay-close').addEventListener('click', closeScanOverlay);
+
+  var fieldSelect = document.getElementById('search-field');
+  var lastFieldValue = fieldSelect.value;
+  fieldSelect.addEventListener('change', function (e) {
+    if (fieldSelect.value === 'scan') {
+      e.stopImmediatePropagation();
+      fieldSelect.value = lastFieldValue;
+      openScanOverlay();
+      return;
+    }
+    lastFieldValue = fieldSelect.value;
+  });
 
   document.getElementById('view-grid-btn').addEventListener('click', function () { setView('grid'); });
   document.getElementById('view-table-btn').addEventListener('click', function () { setView('table'); });
