@@ -256,6 +256,17 @@ def marc_values(record, tag, code):
     return values
 
 
+def clean_marc_year(raw):
+    """Los campos MARC 260/264 $c traen ruido tipo '[2003]', 'cop. 2003',
+    'D.L. 2003' o '2003.'; nos quedamos solo con los 4 dígitos del año."""
+    if not raw:
+        return raw
+    match = re.search(r"\d{4}", raw)
+    if match:
+        return match.group(0)
+    return raw.strip(" [].,")
+
+
 def lookup_bne(isbn):
     try:
         r = requests.get(
@@ -280,7 +291,7 @@ def lookup_bne(isbn):
             title=title,
             author=", ".join(marc_values(record, "100", "a")),
             publisher=publisher,
-            published_year=year,
+            published_year=clean_marc_year(year),
             source="Biblioteca Nacional de España",
         )
     except (requests.RequestException, ET.ParseError):
