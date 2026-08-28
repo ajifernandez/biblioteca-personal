@@ -6,7 +6,7 @@
       <p class="muted">Prestado el {{ current_loan.loaned_at }}</p>
       {% if current_loan.notes %}<p>{{ current_loan.notes }}</p>{% endif %}
     </div>
-    <form hx-post="{{ url_for('return_loan', book_id=book.id, loan_id=current_loan.id) }}" hx-target="#loans" hx-swap="innerHTML">
+    <form hx-post="{{ url_for('books.return_loan', book_id=book.id, loan_id=current_loan.id) }}" hx-target="#loans" hx-swap="innerHTML">
       <div class="form-grid">
         <div class="field">
           <label>Fecha de devolución</label>
@@ -20,7 +20,7 @@
       <button type="submit" class="btn btn-primary btn-block">✅ Marcar como devuelto</button>
     </form>
   {% else %}
-    <form hx-post="{{ url_for('create_loan', book_id=book.id) }}" hx-target="#loans" hx-swap="innerHTML">
+    <form hx-post="{{ url_for('books.create_loan', book_id=book.id) }}" hx-target="#loans" hx-swap="innerHTML">
       <div class="form-grid">
         <div class="field">
           <label>Prestado a</label>

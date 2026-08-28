@@ -23,6 +23,7 @@ from flask import (
     send_from_directory,
     url_for,
 )
+from biblioteca import create_app
 
 DB_PATH = os.environ.get("DB_PATH", "/data/biblioteca.db")
 SCHEMA_PATH = os.path.join(os.path.dirname(__file__), "schema.sql")
@@ -1020,8 +1021,7 @@ def finish_reading(book_id, entry_id):
     return render_reading_partial(book_id)
 
 
-with app.app_context():
-    init_db()
+app = create_app()
 
 if __name__ == "__main__":
     ssl_context = "adhoc" if os.environ.get("HTTPS_ADHOC") else None

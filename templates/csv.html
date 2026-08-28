@@ -18,7 +18,7 @@
 <div class="card">
   <h2 style="margin-top:0;">Exportar</h2>
   <p>Descarga todos tus libros en un archivo CSV.</p>
-  <a class="btn btn-primary" href="{{ url_for('export_csv') }}">⬇️ Descargar CSV</a>
+  <a class="btn btn-primary" href="{{ url_for('books.export_csv') }}">⬇️ Descargar CSV</a>
 </div>
 
 <div class="card">
@@ -29,7 +29,7 @@
     Las filas con <code>id</code> existente actualizan ese libro; el resto se añaden como nuevos.
     El único campo obligatorio es <code>title</code>.
   </p>
-  <form method="post" action="{{ url_for('import_csv') }}" enctype="multipart/form-data">
+  <form method="post" action="{{ url_for('books.import_csv') }}" enctype="multipart/form-data">
     <input type="file" name="csv_file" accept=".csv,text/csv" required>
     <button type="submit" class="btn btn-primary" style="margin-top:0.75rem;">⬆️ Importar CSV</button>
   </form>

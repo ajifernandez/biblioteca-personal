@@ -4,7 +4,7 @@
       <span class="tag">📖 Leyendo</span>
       <p class="muted">Empezado el {{ current_reading.started_at }}</p>
     </div>
-    <form hx-post="{{ url_for('finish_reading', book_id=book.id, entry_id=current_reading.id) }}" hx-target="#reading" hx-swap="innerHTML">
+    <form hx-post="{{ url_for('books.finish_reading', book_id=book.id, entry_id=current_reading.id) }}" hx-target="#reading" hx-swap="innerHTML">
       <div class="form-grid">
         <div class="field">
           <label>Fecha de fin</label>
@@ -29,7 +29,7 @@
       <button type="submit" class="btn btn-primary btn-block">✅ Marcar como terminado</button>
     </form>
   {% else %}
-    <form hx-post="{{ url_for('create_reading', book_id=book.id) }}" hx-target="#reading" hx-swap="innerHTML">
+    <form hx-post="{{ url_for('books.create_reading', book_id=book.id) }}" hx-target="#reading" hx-swap="innerHTML">
       <div class="form-grid">
         <div class="field full">
           <label>Fecha de inicio</label>

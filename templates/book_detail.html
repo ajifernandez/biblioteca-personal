@@ -32,7 +32,7 @@
         {% if copy.id == book.id %}
           <span class="tag tag-success">📍 {{ copy.location or "N/A" }} (este)</span>
         {% else %}
-          <a class="tag" href="{{ url_for('book_detail', book_id=copy.id) }}">📍 {{ copy.location or "N/A" }}</a>
+          <a class="tag" href="{{ url_for('books.book_detail', book_id=copy.id) }}">📍 {{ copy.location or "N/A" }}</a>
         {% endif %}
       {% endfor %}
     </div>
@@ -41,7 +41,7 @@
 
 <details class="editor">
   <summary>Editar datos</summary>
-  <form class="card" method="post" action="{{ url_for('update_book', book_id=book.id) }}" enctype="multipart/form-data">
+  <form class="card" method="post" action="{{ url_for('books.update_book', book_id=book.id) }}" enctype="multipart/form-data">
     <div class="form-grid">
       <div class="field full">
         <label>Título</label>
@@ -151,7 +151,7 @@
   </script>
 </details>
 
-<form method="post" action="{{ url_for('delete_book', book_id=book.id) }}" onsubmit="return confirm('¿Eliminar este libro?');" style="margin-bottom: 1.5rem;">
+<form method="post" action="{{ url_for('books.delete_book', book_id=book.id) }}" onsubmit="return confirm('¿Eliminar este libro?');" style="margin-bottom: 1.5rem;">
   <button type="submit" class="btn btn-danger">🗑 Eliminar libro</button>
 </form>
 

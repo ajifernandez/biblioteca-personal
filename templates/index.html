@@ -6,7 +6,7 @@
 </div>
 
 <div class="toolbar-row">
-  <form class="search-card" hx-get="{{ url_for('search') }}" hx-target="#results" hx-trigger="input changed delay:300ms from:input, change from:select" hx-vals="js:{view: currentView()}">
+  <form class="search-card" hx-get="{{ url_for('pages.search') }}" hx-target="#results" hx-trigger="input changed delay:300ms from:input, change from:select" hx-vals="js:{view: currentView()}">
     <span class="search-icon">🔍</span>
     <input type="text" name="q" placeholder="Buscar..." autofocus>
     <select name="field" id="search-field">
@@ -42,7 +42,7 @@
       id="bulk-apply-location"
       class="btn btn-primary"
       disabled
-      hx-post="{{ url_for('bulk_update_location') }}"
+      hx-post="{{ url_for('books.bulk_update_location') }}"
       hx-target="#results"
       hx-include="#page-scope, #bulk-location, .search-card input[name='q'], .search-card select[name='field']"
       hx-vals="js:{view: currentView()}"
@@ -57,7 +57,7 @@
       id="bulk-apply-loan"
       class="btn btn-primary"
       disabled
-      hx-post="{{ url_for('bulk_create_loan') }}"
+      hx-post="{{ url_for('books.bulk_create_loan') }}"
       hx-target="#results"
       hx-include="#page-scope, #bulk-borrower, .search-card input[name='q'], .search-card select[name='field']"
       hx-vals="js:{view: currentView()}"
@@ -102,7 +102,7 @@
     var form = document.querySelector('.search-card');
     var params = new URLSearchParams(new FormData(form));
     params.set('view', currentView());
-    return htmx.ajax('GET', '{{ url_for("search") }}?' + params.toString(), { target: '#results', swap: 'innerHTML' });
+    return htmx.ajax('GET', '{{ url_for("pages.search") }}?' + params.toString(), { target: '#results', swap: 'innerHTML' });
   }
 
   function setView(mode) {
@@ -201,7 +201,7 @@
     params.set('q', q);
     params.set('field', field);
     params.set('view', currentView());
-    htmx.ajax('GET', '{{ url_for("search") }}?' + params.toString(), { target: '#results', swap: 'innerHTML' });
+    htmx.ajax('GET', '{{ url_for("pages.search") }}?' + params.toString(), { target: '#results', swap: 'innerHTML' });
   }
 
   applyViewButtons();

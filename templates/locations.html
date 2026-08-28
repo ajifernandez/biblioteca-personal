@@ -14,12 +14,12 @@
   <div class="location-grid">
     {% for loc in locations %}
       {% if loc.loc %}
-        <a class="location-card" href="{{ url_for('index', q=loc.loc, field='ubicacion') }}">
+        <a class="location-card" href="{{ url_for('pages.index', q=loc.loc, field='ubicacion') }}">
           <span class="location-name">📍 {{ loc.loc }}</span>
           <span class="location-count">{{ loc.n }}</span>
         </a>
       {% else %}
-        <a class="location-card" href="{{ url_for('index', field='sin_ubicacion') }}">
+        <a class="location-card" href="{{ url_for('pages.index', field='sin_ubicacion') }}">
           <span class="location-name muted">Sin ubicación</span>
           <span class="location-count">{{ loc.n }}</span>
         </a>
