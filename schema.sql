@@ -11,11 +11,20 @@ CREATE TABLE IF NOT EXISTS books (
     added_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS locations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    color TEXT,
+    icon TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS loans (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
     borrower_name TEXT NOT NULL,
     loaned_at TEXT NOT NULL,
+    expected_return_at TEXT,
     returned_at TEXT,
     notes TEXT,
     return_notes TEXT,
@@ -27,6 +36,7 @@ CREATE TABLE IF NOT EXISTS reading_entries (
     book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
     started_at TEXT NOT NULL,
     finished_at TEXT,
+    status TEXT NOT NULL DEFAULT 'reading',
     rating INTEGER,
     notes TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))

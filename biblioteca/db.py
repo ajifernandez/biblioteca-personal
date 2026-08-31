@@ -6,6 +6,20 @@ DB_PATH = os.environ.get("DB_PATH", "/data/biblioteca.db")
 SCHEMA_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "schema.sql")
 
 
+def _table_exists(conn, name):
+    row = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
+    ).fetchone()
+    return row is not None
+
+
+def _column_exists(conn, table, column):
+    for r in conn.execute(f"PRAGMA table_info({table})").fetchall():
+        if r[1] == column:
+            return True
+    return False
+
+
 def get_db():
     if "db" not in g:
         os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
@@ -61,10 +75,57 @@ def migrate_drop_isbn_unique(conn):
     conn.commit()
 
 
+def migrate_locations_table(conn):
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS locations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            color TEXT,
+            icon TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+        """
+    )
+    conn.commit()
+
+
+def migrate_reading_status(conn):
+    if not _table_exists(conn, "reading_entries"):
+        return
+    if not _column_exists(conn, "reading_entries", "status"):
+        conn.execute(
+            "ALTER TABLE reading_entries ADD COLUMN status TEXT NOT NULL DEFAULT 'reading'"
+        )
+        conn.execute(
+            """
+            UPDATE reading_entries
+            SET status = CASE
+                WHEN finished_at IS NOT NULL THEN 'finished'
+                ELSE 'reading'
+            END
+            """
+        )
+        conn.commit()
+
+
+def migrate_loan_due_date(conn):
+    if not _table_exists(conn, "loans"):
+        return
+    if not _column_exists(conn, "loans", "expected_return_at"):
+        conn.execute(
+            "ALTER TABLE loans ADD COLUMN expected_return_at TEXT"
+        )
+        conn.commit()
+
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     migrate_drop_isbn_unique(conn)
     with open(SCHEMA_PATH) as f:
         conn.executescript(f.read())
+    migrate_locations_table(conn)
+    migrate_reading_status(conn)
+    migrate_loan_due_date(conn)
     conn.close()
