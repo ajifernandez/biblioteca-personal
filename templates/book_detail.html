@@ -1,10 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
+{% set has_finished = [] %}
+{% for e in reading_entries %}{% if e.finished_at %}{% set _ = has_finished.append(1) %}{% endif %}{% endfor %}
+
 <div class="hero">
   {% if book.cover_url %}
-    <img class="book-cover-lg" src="{{ book.cover_url }}" alt="">
+    <img class="book-cover-lg" src="{{ book.cover_url }}" alt="" loading="lazy" decoding="async">
   {% else %}
-    <div class="book-cover-lg" style="display:flex;align-items:center;justify-content:center;font-size:2.5rem;background:linear-gradient(135deg, var(--primary-soft), var(--border));">📕</div>
+    {% set hue = ((book.title | length) * 31 + (book.id or 0) * 17) % 360 %}
+    {% set hue2 = (hue + 40) % 360 %}
+    <div class="book-cover-lg cover-fallback-lg" style="background: linear-gradient(135deg, hsl({{ hue }}, 60%, 45%), hsl({{ hue2 }}, 70%, 35%)); display:flex; align-items:center; justify-content:center; color:#fff; font-size:3.2rem; font-weight:800;">
+      {{ (book.title[0] if book.title else '?') | upper }}
+    </div>
   {% endif %}
   <div>
     <h1>{{ book.title }}</h1>
@@ -12,12 +19,15 @@
     {% if book.publisher %}<p class="author-line">{{ book.publisher }}</p>{% endif %}
     <div>
       {% if current_loan %}
-        <span class="tag tag-warning">🤝 Prestado a {{ current_loan.borrower_name }}</span>
+        <span class="tag tag-warning">🤝 {{ current_loan.borrower_name }}</span>
+      {% elif current_reading %}
+        <span class="tag">📖 Leyendo</span>
+      {% elif has_finished %}
+        <span class="tag tag-success">✓ Terminado</span>
       {% else %}
-        <span class="tag tag-success">Disponible</span>
+        <span class="tag">Por leer</span>
       {% endif %}
-      {% if current_reading %}<span class="tag">📖 Leyendo</span>{% endif %}
-      {% if book.location %}<span class="tag">📍 {{ book.location }}</span>{% endif %}
+      {% if book.location %}<span class="tag tag-muted">📍 {{ book.location }}</span>{% endif %}
       {% if book.isbn %}<span class="tag">{{ book.isbn }}</span>{% endif %}
       {% if copies|length > 1 %}<span class="tag">📚 {{ copies|length }} ejemplares</span>{% endif %}
     </div>
