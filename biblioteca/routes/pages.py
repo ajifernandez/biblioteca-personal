@@ -181,3 +181,8 @@ def stats():
         top_borrowers=get_top_borrowers(db),
         years=get_books_by_year(db),
     )
+
+
+@pages.route("/add-isbn", endpoint="add_isbn")
+def add_isbn():
+    return render_template("add_isbn.html")
