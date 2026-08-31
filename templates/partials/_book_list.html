@@ -2,7 +2,7 @@
   <div class="empty-state">
     <div class="icon">🔎</div>
     <p><strong>No hay libros que coincidan.</strong></p>
-    <p>Prueba otra búsqueda o <a href="{{ url_for('scan') }}">añade un libro nuevo</a>.</p>
+    <p>Prueba otra búsqueda o <a href="{{ url_for('pages.scan') }}">añade un libro nuevo</a>.</p>
   </div>
 {% elif view == 'table' %}
   <div class="table-wrap">

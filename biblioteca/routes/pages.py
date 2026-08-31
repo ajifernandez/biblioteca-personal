@@ -25,7 +25,23 @@ def search():
     q = request.args.get("q", "").strip()
     field = request.args.get("field", "todo")
     view = request.args.get("view", "grid")
-    return render_template("partials/_book_list.html", books=find_books(q, field), view=view)
+    status = request.args.get("status", "todos")
+    location = request.args.get("location", "").strip()
+    author = request.args.get("author", "").strip()
+    year_from = request.args.get("year_from", "").strip()
+    year_to = request.args.get("year_to", "").strip()
+    sort = request.args.get("sort", "added_at")
+    books = find_books(
+        q=q,
+        field=field,
+        status=status,
+        location=location,
+        author=author,
+        year_from=year_from,
+        year_to=year_to,
+        sort=sort,
+    )
+    return render_template("partials/_book_list.html", books=books, view=view)
 
 
 @pages.route("/csv", endpoint="csv_page")

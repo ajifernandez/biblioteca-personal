@@ -278,56 +278,129 @@ def save_cover_upload(file_storage):
 
 # Búsqueda de libros
 SELECT_BOOKS_SQL = """
-    SELECT b.*, l.borrower_name AS current_borrower, l.loaned_at AS current_loaned_at,
-           r.started_at AS reading_started_at
+    SELECT
+        b.*,
+        l.borrower_name AS current_borrower,
+        l.loaned_at AS current_loaned_at,
+        cur.started_at AS reading_started_at
     FROM books b
     LEFT JOIN loans l ON l.book_id = b.id AND l.returned_at IS NULL
-    LEFT JOIN reading_entries r ON r.book_id = b.id AND r.finished_at IS NULL
+    LEFT JOIN (
+        SELECT book_id, MIN(started_at) AS started_at
+        FROM reading_entries
+        WHERE finished_at IS NULL
+        GROUP BY book_id
+    ) cur ON cur.book_id = b.id
 """
 
 
-def find_books(q, field):
-    db = get_db()
-    if field == "sin_ubicacion":
-        return db.execute(
-            f"{SELECT_BOOKS_SQL} WHERE b.location IS NULL OR TRIM(b.location) = '' ORDER BY b.title"
-        ).fetchall()
-    if not q:
-        return db.execute(f"{SELECT_BOOKS_SQL} ORDER BY b.added_at DESC").fetchall()
+ORDER_CLAUSES = {
+    "title_asc": "b.title COLLATE NOCASE ASC",
+    "title_desc": "b.title COLLATE NOCASE DESC",
+    "author": "b.author COLLATE NOCASE ASC, b.title COLLATE NOCASE ASC",
+    "year": "CAST(COALESCE(b.published_year, '') AS INTEGER) DESC, b.title COLLATE NOCASE ASC",
+    "added_at": "b.added_at DESC, b.title COLLATE NOCASE ASC",
+    "location": "b.location COLLATE NOCASE ASC, b.title COLLATE NOCASE ASC",
+    "status": """
+        CASE
+            WHEN l.borrower_name IS NOT NULL THEN 0
+            WHEN cur.book_id IS NOT NULL THEN 1
+            WHEN EXISTS (
+                SELECT 1 FROM reading_entries re
+                WHERE re.book_id = b.id AND re.finished_at IS NOT NULL
+            ) THEN 2
+            ELSE 3
+        END,
+        b.title COLLATE NOCASE ASC
+    """,
+}
 
-    like = f"%{q}%"
-    if field == "titulo":
-        return db.execute(
-            f"{SELECT_BOOKS_SQL} WHERE b.title LIKE ? ORDER BY b.title",
-            (like,),
-        ).fetchall()
-    if field == "autor":
-        return db.execute(
-            f"{SELECT_BOOKS_SQL} WHERE b.author LIKE ? ORDER BY b.author",
-            (like,),
-        ).fetchall()
-    if field == "isbn":
-        return db.execute(
-            f"{SELECT_BOOKS_SQL} WHERE b.isbn LIKE ? ORDER BY b.title",
-            (like,),
-        ).fetchall()
-    if field == "ubicacion":
-        return db.execute(
-            f"{SELECT_BOOKS_SQL} WHERE b.location LIKE ? ORDER BY b.title",
-            (like,),
-        ).fetchall()
-    if field == "prestado":
-        return db.execute(
-            f"{SELECT_BOOKS_SQL} WHERE l.borrower_name LIKE ? ORDER BY l.loaned_at DESC",
-            (like,),
-        ).fetchall()
-    return db.execute(
-        f"""{SELECT_BOOKS_SQL}
-           WHERE b.title LIKE ? OR b.author LIKE ? OR b.isbn LIKE ?
-              OR b.location LIKE ? OR l.borrower_name LIKE ?
-           ORDER BY b.added_at DESC""",
-        (like, like, like, like, like),
-    ).fetchall()
+
+def find_books(
+    q="",
+    field="todo",
+    status="todos",
+    location="",
+    author="",
+    year_from="",
+    year_to="",
+    sort="added_at",
+):
+    db = get_db()
+    where_clauses = []
+    params = []
+
+    if field == "sin_ubicacion":
+        where_clauses.append("(b.location IS NULL OR TRIM(b.location) = '')")
+    elif q:
+        like = f"%{q}%"
+        if field == "titulo":
+            where_clauses.append("b.title LIKE ?")
+            params.append(like)
+        elif field == "autor":
+            where_clauses.append("b.author LIKE ?")
+            params.append(like)
+        elif field == "isbn":
+            where_clauses.append("b.isbn LIKE ?")
+            params.append(like)
+        elif field == "ubicacion":
+            where_clauses.append("b.location LIKE ?")
+            params.append(like)
+        elif field == "editorial":
+            where_clauses.append("b.publisher LIKE ?")
+            params.append(like)
+        elif field == "prestado":
+            where_clauses.append("l.borrower_name LIKE ?")
+            params.append(like)
+        else:
+            where_clauses.append(
+                """(
+                    b.title LIKE ? OR b.author LIKE ? OR b.isbn LIKE ?
+                    OR b.location LIKE ? OR l.borrower_name LIKE ?
+                    OR b.publisher LIKE ?
+                )"""
+            )
+            params.extend([like] * 6)
+
+    if status and status != "todos":
+        if status == "disponible":
+            where_clauses.append("l.borrower_name IS NULL")
+        elif status == "prestado":
+            where_clauses.append("l.borrower_name IS NOT NULL")
+        elif status == "leyendo":
+            where_clauses.append("cur.book_id IS NOT NULL")
+        elif status == "terminado":
+            where_clauses.append(
+                "EXISTS (SELECT 1 FROM reading_entries re WHERE re.book_id = b.id AND re.finished_at IS NOT NULL)"
+            )
+        elif status == "por_leer":
+            where_clauses.append(
+                "NOT EXISTS (SELECT 1 FROM reading_entries re WHERE re.book_id = b.id)"
+            )
+
+    if location:
+        where_clauses.append("TRIM(COALESCE(b.location, '')) = ?")
+        params.append(location.strip())
+    if author:
+        where_clauses.append("b.author LIKE ?")
+        params.append(f"%{author}%")
+    if year_from:
+        where_clauses.append(
+            "b.published_year IS NOT NULL AND b.published_year != '' AND CAST(b.published_year AS INTEGER) >= ?"
+        )
+        params.append(int(year_from))
+    if year_to:
+        where_clauses.append(
+            "b.published_year IS NOT NULL AND b.published_year != '' AND CAST(b.published_year AS INTEGER) <= ?"
+        )
+        params.append(int(year_to))
+
+    order = ORDER_CLAUSES.get(sort, ORDER_CLAUSES["added_at"])
+    sql = SELECT_BOOKS_SQL
+    if where_clauses:
+        sql += f" WHERE {' AND '.join(where_clauses)}"
+    sql += f" ORDER BY {order}"
+    return db.execute(sql, params).fetchall()
 
 
 def lookup_local_book(isbn, exclude_book_id=None):

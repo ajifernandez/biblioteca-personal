@@ -33,18 +33,58 @@
 </div>
 
 <div class="toolbar-row">
-  <form class="search-card" hx-get="{{ url_for('pages.search') }}" hx-target="#results" hx-trigger="input changed delay:300ms from:input, change from:select" hx-vals="js:{view: currentView()}">
+  <form class="search-card" id="search-form" hx-get="{{ url_for('pages.search') }}" hx-target="#results" hx-trigger="input changed delay:300ms from:input, change from:select" hx-vals="js:{view: currentView()}">
     <span class="search-icon">🔍</span>
-    <input type="text" name="q" placeholder="Buscar..." autofocus>
-    <select name="field" id="search-field">
+    <input type="text" name="q" placeholder="Buscar título, autor, ISBN..." aria-label="Buscar" autofocus>
+    <select name="field" id="search-field" aria-label="Campo">
       <option value="todo">Todo</option>
       <option value="titulo">Título</option>
       <option value="autor">Autor</option>
       <option value="isbn">ISBN</option>
+      <option value="editorial">Editorial</option>
       <option value="ubicacion">Ubicación</option>
       <option value="prestado">Prestado a</option>
       <option value="scan">📷 Escanear ISBN</option>
     </select>
+    <select name="status" id="search-status" aria-label="Estado">
+      <option value="todos">Todos los estados</option>
+      <option value="disponible">Disponible</option>
+      <option value="prestado">Prestado</option>
+      <option value="leyendo">Leyendo</option>
+      <option value="terminado">Terminado</option>
+      <option value="por_leer">Por leer</option>
+    </select>
+    <select name="sort" id="search-sort" aria-label="Ordenar">
+      <option value="added_at">Más recientes</option>
+      <option value="title_asc">Título A-Z</option>
+      <option value="title_desc">Título Z-A</option>
+      <option value="author">Autor</option>
+      <option value="year">Año</option>
+      <option value="location">Ubicación</option>
+      <option value="status">Estado</option>
+    </select>
+    <details class="filter-panel" id="filter-panel">
+      <summary class="filter-summary">⚙ Filtros</summary>
+      <div class="filter-grid">
+        <div class="field">
+          <label for="search-location">Ubicación</label>
+          <input type="text" name="location" id="search-location" list="location-suggestions" placeholder="Todas">
+        </div>
+        <div class="field">
+          <label for="search-author">Autor</label>
+          <input type="text" name="author" id="search-author" placeholder="Cualquiera">
+        </div>
+        <div class="field">
+          <label for="search-year-from">Año desde</label>
+          <input type="number" name="year_from" id="search-year-from" min="1000" max="2100" placeholder="ej. 2010">
+        </div>
+        <div class="field">
+          <label for="search-year-to">Año hasta</label>
+          <input type="number" name="year_to" id="search-year-to" min="1000" max="2100" placeholder="ej. 2024">
+        </div>
+      </div>
+    </details>
+    <datalist id="location-suggestions"></datalist>
   </form>
   <div class="view-toggle">
     <button type="button" id="view-grid-btn" class="btn btn-ghost" title="Vista en cuadrícula">🔲</button>
@@ -233,6 +273,17 @@
 
   applyViewButtons();
   loadInitialResults();
+
+  fetch('/api/locations')
+    .then(function (res) { return res.json(); })
+    .then(function (names) {
+      var dl = document.getElementById('location-suggestions');
+      if (!dl) return;
+      dl.innerHTML = names.map(function (name) {
+        return '<option value="' + name.replace(/"/g, '&quot;') + '">';
+      }).join('');
+    })
+    .catch(function () {});
 
   document.body.addEventListener('htmx:afterSwap', function (e) {
     if (e.detail.target && e.detail.target.id === 'results') updateBulkBar();
