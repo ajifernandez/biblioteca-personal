@@ -45,4 +45,46 @@
 {% else %}
   <p class="muted">No hay ubicaciones registradas.</p>
 {% endif %}
+
+<h2 style="font-size:1.1rem; font-weight:700; margin:1.5rem 0 0.75rem;">Top autores</h2>
+{% if top_authors %}
+  <div class="location-grid">
+    {% for a in top_authors %}
+      <div class="location-card">
+        <span class="location-name">✍️ {{ a.author }}</span>
+        <span class="location-count">{{ a.n }}</span>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="muted">No hay autores registrados.</p>
+{% endif %}
+
+<h2 style="font-size:1.1rem; font-weight:700; margin:1.5rem 0 0.75rem;">Top prestatarios</h2>
+{% if top_borrowers %}
+  <div class="location-grid">
+    {% for b in top_borrowers %}
+      <div class="location-card">
+        <span class="location-name">🤝 {{ b.borrower_name }}</span>
+        <span class="location-count">{{ b.n }}</span>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="muted">No hay préstamos registrados.</p>
+{% endif %}
+
+<h2 style="font-size:1.1rem; font-weight:700; margin:1.5rem 0 0.75rem;">Años más frecuentes</h2>
+{% if years %}
+  <div class="location-grid">
+    {% for y in years %}
+      <div class="location-card">
+        <span class="location-name">📅 {{ y.year }}</span>
+        <span class="location-count">{{ y.n }}</span>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="muted">No hay años registrados.</p>
+{% endif %}
 {% endblock %}

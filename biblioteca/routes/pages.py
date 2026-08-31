@@ -6,9 +6,12 @@ from ..services import (
     find_books,
     get_active_loans,
     get_active_readings,
+    get_books_by_year,
     get_dashboard_stats,
     get_finished_readings,
     get_loan_history,
+    get_top_authors,
+    get_top_borrowers,
     get_top_locations,
 )
 
@@ -174,4 +177,7 @@ def stats():
         "stats.html",
         stats=get_dashboard_stats(db),
         top_locations=get_top_locations(db),
+        top_authors=get_top_authors(db),
+        top_borrowers=get_top_borrowers(db),
+        years=get_books_by_year(db),
     )

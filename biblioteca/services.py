@@ -547,3 +547,51 @@ def get_top_locations(db, limit=8):
         """,
         (limit,),
     ).fetchall()
+
+
+def get_top_authors(db, limit=8):
+    return db.execute(
+        """
+        SELECT TRIM(author) AS author, COUNT(*) AS n
+        FROM books
+        WHERE author IS NOT NULL AND TRIM(author) != ''
+        GROUP BY author
+        ORDER BY n DESC, author COLLATE NOCASE
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+
+
+def get_top_borrowers(db, limit=8):
+    return db.execute(
+        """
+        SELECT borrower_name, COUNT(*) AS n
+        FROM loans
+        WHERE borrower_name IS NOT NULL AND TRIM(borrower_name) != ''
+        GROUP BY borrower_name
+        ORDER BY n DESC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
+
+
+def get_books_by_year(db, limit=10):
+    return db.execute(
+        """
+        SELECT
+            CASE WHEN published_year IS NULL OR TRIM(published_year) = '' THEN 'Sin año'
+                 ELSE TRIM(published_year)
+            END AS year,
+            COUNT(*) AS n
+        FROM books
+        GROUP BY published_year
+        ORDER BY CASE WHEN published_year IS NULL OR TRIM(published_year) = '' THEN 0
+                      ELSE 1
+                 END DESC,
+                 CAST(published_year AS INTEGER) DESC
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()
