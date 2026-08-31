@@ -282,7 +282,8 @@ SELECT_BOOKS_SQL = """
         b.*,
         l.borrower_name AS current_borrower,
         l.loaned_at AS current_loaned_at,
-        cur.started_at AS reading_started_at
+        cur.started_at AS reading_started_at,
+        fin.finished_at AS reading_finished_at
     FROM books b
     LEFT JOIN loans l ON l.book_id = b.id AND l.returned_at IS NULL
     LEFT JOIN (
@@ -291,6 +292,12 @@ SELECT_BOOKS_SQL = """
         WHERE finished_at IS NULL
         GROUP BY book_id
     ) cur ON cur.book_id = b.id
+    LEFT JOIN (
+        SELECT book_id, MAX(finished_at) AS finished_at
+        FROM reading_entries
+        WHERE finished_at IS NOT NULL
+        GROUP BY book_id
+    ) fin ON fin.book_id = b.id
 """
 
 
