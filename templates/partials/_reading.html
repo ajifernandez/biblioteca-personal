@@ -11,6 +11,13 @@
           <input type="date" name="finished_at">
         </div>
         <div class="field">
+          <label>Estado</label>
+          <select name="status">
+            <option value="finished">Terminado</option>
+            <option value="abandoned">Abandonado</option>
+          </select>
+        </div>
+        <div class="field">
           <label>Valoración</label>
           <select name="rating">
             <option value="">Sin valorar</option>
@@ -26,7 +33,7 @@
           <textarea name="notes" rows="2" placeholder="Qué te ha parecido..."></textarea>
         </div>
       </div>
-      <button type="submit" class="btn btn-primary btn-block">✅ Marcar como terminado</button>
+      <button type="submit" class="btn btn-primary btn-block">✅ Marcar fin de lectura</button>
     </form>
   {% else %}
     <form hx-post="{{ url_for('books.create_reading', book_id=book.id) }}" hx-target="#reading" hx-swap="innerHTML">
@@ -51,7 +58,7 @@
     {% for entry in reading_entries %}
       <div class="timeline-entry {{ 'reading' if not entry.finished_at }}">
         {% if entry.finished_at %}
-          <div class="dates">{{ entry.started_at }} → {{ entry.finished_at }}</div>
+          <div class="dates">{{ entry.started_at }} → {{ entry.finished_at }}{% if entry.status == 'abandoned' %} · Abandonado{% endif %}</div>
           {% if entry.rating %}<div class="stars">{{ '★' * entry.rating }}{{ '☆' * (5 - entry.rating) }}</div>{% endif %}
         {% else %}
           <div class="dates">Leyendo desde {{ entry.started_at }}</div>

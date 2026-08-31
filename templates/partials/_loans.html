@@ -3,7 +3,7 @@
     <div class="loan-current">
       <span class="tag tag-warning">Prestado</span>
       <p><strong>{{ current_loan.borrower_name }}</strong></p>
-      <p class="muted">Prestado el {{ current_loan.loaned_at }}</p>
+      <p class="muted">Prestado el {{ current_loan.loaned_at }}{% if current_loan.expected_return_at %} · Volverá el {{ current_loan.expected_return_at }}{% endif %}</p>
       {% if current_loan.notes %}<p>{{ current_loan.notes }}</p>{% endif %}
     </div>
     <form hx-post="{{ url_for('books.return_loan', book_id=book.id, loan_id=current_loan.id) }}" hx-target="#loans" hx-swap="innerHTML">
@@ -30,6 +30,10 @@
           <label>Fecha de préstamo</label>
           <input type="date" name="loaned_at">
         </div>
+        <div class="field">
+          <label>Fecha prevista de devolución</label>
+          <input type="date" name="expected_return_at">
+        </div>
         <div class="field full">
           <label>Notas</label>
           <textarea name="notes" rows="2" placeholder="Ej. Se lo lleva para vacaciones"></textarea>
@@ -53,7 +57,7 @@
         {% if loan.returned_at %}
           <div class="dates">{{ loan.loaned_at }} → {{ loan.returned_at }}</div>
         {% else %}
-          <div class="dates">Prestado desde {{ loan.loaned_at }}</div>
+          <div class="dates">Prestado desde {{ loan.loaned_at }}{% if loan.expected_return_at %} · vuelve el {{ loan.expected_return_at }}{% endif %}</div>
         {% endif %}
         {% if loan.notes %}<div class="notes">{{ loan.notes }}</div>{% endif %}
         {% if loan.return_notes %}<div class="notes">Devuelto: {{ loan.return_notes }}</div>{% endif %}

@@ -320,11 +320,12 @@ def create_loan(book_id):
     loaned_at = request.form.get("loaned_at", "").strip() or datetime.now().strftime(
         "%Y-%m-%d"
     )
+    expected_return_at = request.form.get("expected_return_at", "").strip() or None
     notes = request.form.get("notes", "").strip()
     db.execute(
-        """INSERT INTO loans (book_id, borrower_name, loaned_at, notes)
-           VALUES (?, ?, ?, ?)""",
-        (book_id, borrower_name, loaned_at, notes),
+        """INSERT INTO loans (book_id, borrower_name, loaned_at, expected_return_at, notes)
+           VALUES (?, ?, ?, ?, ?)""",
+        (book_id, borrower_name, loaned_at, expected_return_at, notes),
     )
     db.commit()
     return render_template("partials/_loans.html", book=db.execute("SELECT * FROM books WHERE id = ?", (book_id,)).fetchone(), current_loan=db.execute("SELECT * FROM loans WHERE book_id = ? AND returned_at IS NULL ORDER BY loaned_at DESC LIMIT 1", (book_id,)).fetchone(), loans=db.execute("SELECT * FROM loans WHERE book_id = ? ORDER BY loaned_at DESC, id DESC", (book_id,)).fetchall())
@@ -371,8 +372,8 @@ def create_reading(book_id):
         "%Y-%m-%d"
     )
     db.execute(
-        "INSERT INTO reading_entries (book_id, started_at) VALUES (?, ?)",
-        (book_id, started_at),
+        "INSERT INTO reading_entries (book_id, started_at, status) VALUES (?, ?, ?)",
+        (book_id, started_at, "reading"),
     )
     db.commit()
     return render_template("partials/_reading.html", book=db.execute("SELECT * FROM books WHERE id = ?", (book_id,)).fetchone(), current_reading=db.execute("SELECT * FROM reading_entries WHERE book_id = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1", (book_id,)).fetchone(), reading_entries=db.execute("SELECT * FROM reading_entries WHERE book_id = ? ORDER BY started_at DESC, id DESC", (book_id,)).fetchall())
@@ -391,13 +392,16 @@ def finish_reading(book_id, entry_id):
     finished_at = request.form.get("finished_at", "").strip() or datetime.now().strftime(
         "%Y-%m-%d"
     )
+    status = request.form.get("status", "").strip() or "finished"
+    if status not in ("finished", "abandoned"):
+        status = "finished"
     rating = request.form.get("rating", type=int)
     if rating is not None and not 1 <= rating <= 5:
         rating = None
     notes = request.form.get("notes", "").strip()
     db.execute(
-        "UPDATE reading_entries SET finished_at = ?, rating = ?, notes = ? WHERE id = ? AND book_id = ?",
-        (finished_at, rating, notes, entry_id, book_id),
+        "UPDATE reading_entries SET finished_at = ?, status = ?, rating = ?, notes = ? WHERE id = ? AND book_id = ?",
+        (finished_at, status, rating, notes, entry_id, book_id),
     )
     db.commit()
     return render_template("partials/_reading.html", book=db.execute("SELECT * FROM books WHERE id = ?", (book_id,)).fetchone(), current_reading=db.execute("SELECT * FROM reading_entries WHERE book_id = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1", (book_id,)).fetchone(), reading_entries=db.execute("SELECT * FROM reading_entries WHERE book_id = ? ORDER BY started_at DESC, id DESC", (book_id,)).fetchall())
