@@ -119,6 +119,20 @@ def migrate_loan_due_date(conn):
         conn.commit()
 
 
+def migrate_populate_locations(conn):
+    if not _table_exists(conn, "locations") or not _table_exists(conn, "books"):
+        return
+    conn.execute(
+        """
+        INSERT OR IGNORE INTO locations (name)
+        SELECT DISTINCT TRIM(b.location)
+        FROM books b
+        WHERE b.location IS NOT NULL AND TRIM(b.location) != ''
+        """
+    )
+    conn.commit()
+
+
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
@@ -126,6 +140,7 @@ def init_db():
     with open(SCHEMA_PATH) as f:
         conn.executescript(f.read())
     migrate_locations_table(conn)
+    migrate_populate_locations(conn)
     migrate_reading_status(conn)
     migrate_loan_due_date(conn)
     conn.close()

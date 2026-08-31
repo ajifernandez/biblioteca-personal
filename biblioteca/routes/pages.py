@@ -1,4 +1,5 @@
-from flask import Blueprint, render_template, request
+import sqlite3
+from flask import Blueprint, redirect, render_template, request, url_for
 
 from ..db import get_db
 from ..services import (
@@ -58,18 +59,87 @@ def csv_page():
 
 @pages.route("/ubicaciones", endpoint="locations")
 def locations():
-    from ..db import get_db
-
     db = get_db()
     rows = db.execute(
-        """SELECT
-               CASE WHEN TRIM(COALESCE(location, '')) = '' THEN NULL ELSE TRIM(location) END AS loc,
-               COUNT(*) AS n
-           FROM books
-           GROUP BY loc
-           ORDER BY loc IS NULL, loc COLLATE NOCASE"""
+        """
+        SELECT l.id, l.name,
+               COUNT(b.id) AS n
+        FROM locations l
+        LEFT JOIN books b ON TRIM(COALESCE(b.location, '')) = l.name
+        GROUP BY l.id, l.name
+        ORDER BY l.name COLLATE NOCASE
+        """
     ).fetchall()
     return render_template("locations.html", locations=rows)
+
+
+@pages.route("/ubicaciones", endpoint="create_location", methods=["POST"])
+def create_location():
+    db = get_db()
+    name = request.form.get("name", "").strip()
+    if not name:
+        return render_template("locations.html", locations=db.execute(
+            """
+            SELECT l.id, l.name, COUNT(b.id) AS n
+            FROM locations l
+            LEFT JOIN books b ON TRIM(COALESCE(b.location, '')) = l.name
+            GROUP BY l.id, l.name
+            ORDER BY l.name COLLATE NOCASE
+            """
+        ).fetchall(), error="El nombre es obligatorio"), 400
+    try:
+        db.execute("INSERT INTO locations (name) VALUES (?)", (name,))
+        db.commit()
+    except sqlite3.IntegrityError:
+        return render_template("locations.html", locations=db.execute(
+            """
+            SELECT l.id, l.name, COUNT(b.id) AS n
+            FROM locations l
+            LEFT JOIN books b ON TRIM(COALESCE(b.location, '')) = l.name
+            GROUP BY l.id, l.name
+            ORDER BY l.name COLLATE NOCASE
+            """
+        ).fetchall(), error="Ya existe esa ubicación"), 400
+    return redirect(url_for("pages.locations"))
+
+
+@pages.route("/ubicaciones/<int:location_id>/editar", endpoint="edit_location", methods=["POST"])
+def edit_location(location_id):
+    db = get_db()
+    location = db.execute("SELECT * FROM locations WHERE id = ?", (location_id,)).fetchone()
+    if not location:
+        return "Ubicación no encontrada", 404
+    old_name = location["name"]
+    new_name = request.form.get("name", "").strip()
+    if not new_name:
+        return redirect(url_for("pages.locations"))
+    try:
+        db.execute("UPDATE locations SET name = ? WHERE id = ?", (new_name, location_id))
+        db.execute(
+            "UPDATE books SET location = ? WHERE TRIM(COALESCE(location, '')) = ?",
+            (new_name, old_name),
+        )
+        db.commit()
+    except sqlite3.IntegrityError:
+        pass
+    return redirect(url_for("pages.locations"))
+
+
+@pages.route("/ubicaciones/<int:location_id>/eliminar", endpoint="delete_location", methods=["POST"])
+def delete_location(location_id):
+    db = get_db()
+    location = db.execute("SELECT * FROM locations WHERE id = ?", (location_id,)).fetchone()
+    if not location:
+        return "Ubicación no encontrada", 404
+    count = db.execute(
+        "SELECT COUNT(*) FROM books WHERE TRIM(COALESCE(location, '')) = ?",
+        (location["name"],),
+    ).fetchone()[0]
+    if count > 0:
+        return redirect(url_for("pages.locations"))
+    db.execute("DELETE FROM locations WHERE id = ?", (location_id,))
+    db.commit()
+    return redirect(url_for("pages.locations"))
 
 
 @pages.route("/scan", endpoint="scan")

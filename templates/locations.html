@@ -2,28 +2,44 @@
 {% block content %}
 <div class="page-header">
   <h1>Ubicaciones</h1>
-  <p>Cuántos libros tienes en cada sitio. Toca una para ver esos libros.</p>
+  <p>Gestiona dónde guardas tus libros.</p>
+</div>
+
+{% if error %}
+  <div class="card" style="border-color: var(--danger, #c0392b); color: var(--danger, #c0392b); margin-bottom: 1rem;">
+    {{ error }}
+  </div>
+{% endif %}
+
+<div class="card" style="margin-bottom: 1.5rem;">
+  <form method="post" action="{{ url_for('pages.create_location') }}" class="form-grid">
+    <div class="field full">
+      <label>Nueva ubicación</label>
+      <input type="text" name="name" required placeholder="ej. Salón, estante 2">
+    </div>
+    <button type="submit" class="btn btn-primary">＋ Añadir ubicación</button>
+  </form>
 </div>
 
 {% if not locations %}
   <div class="empty-state">
     <div class="icon">📍</div>
-    <p><strong>Todavía no hay libros catalogados.</strong></p>
+    <p>No hay ubicaciones definidas todavía.</p>
   </div>
 {% else %}
   <div class="location-grid">
     {% for loc in locations %}
-      {% if loc.loc %}
-        <a class="location-card" href="{{ url_for('pages.index', q=loc.loc, field='ubicacion') }}">
-          <span class="location-name">📍 {{ loc.loc }}</span>
-          <span class="location-count">{{ loc.n }}</span>
-        </a>
-      {% else %}
-        <a class="location-card" href="{{ url_for('pages.index', field='sin_ubicacion') }}">
-          <span class="location-name muted">Sin ubicación</span>
-          <span class="location-count">{{ loc.n }}</span>
-        </a>
-      {% endif %}
+      <div class="location-card">
+        <a class="location-name" href="{{ url_for('pages.index', q=loc.name, field='ubicacion') }}">📍 {{ loc.name }}</a>
+        <span class="location-count">{{ loc.n }}</span>
+        <form method="post" action="{{ url_for('pages.edit_location', location_id=loc.id) }}" class="field full" style="margin: 0.5rem 0 0;">
+          <input type="text" name="name" value="{{ loc.name }}" required>
+          <button type="submit" class="btn btn-ghost" style="margin-top:0.5rem;">Renombrar</button>
+        </form>
+        <form method="post" action="{{ url_for('pages.delete_location', location_id=loc.id) }}" style="margin-top:0.5rem;" onsubmit="return confirm('¿Eliminar esta ubicación?');">
+          <button type="submit" class="btn btn-danger" {% if loc.n > 0 %}disabled{% endif %}>Eliminar</button>
+        </form>
+      </div>
     {% endfor %}
   </div>
 {% endif %}
