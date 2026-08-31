@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h1>Estadísticas</h1>
+  <p>Resumen de tu biblioteca.</p>
+</div>
+
+<div class="dashboard-grid">
+  <div class="stat-card">
+    <span class="stat-value">{{ stats.total }}</span>
+    <span class="stat-label">Libros</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-value">{{ stats.available }}</span>
+    <span class="stat-label">Disponibles</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-value">{{ stats.loaned }}</span>
+    <span class="stat-label">Prestados</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-value">{{ stats.reading }}</span>
+    <span class="stat-label">Leyendo</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-value">{{ stats.finished }}</span>
+    <span class="stat-label">Terminados</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-value">{{ stats.pending }}</span>
+    <span class="stat-label">Por leer</span>
+  </div>
+</div>
+
+<h2 style="font-size:1.1rem; font-weight:700; margin:1.5rem 0 0.75rem;">Top ubicaciones</h2>
+{% if top_locations %}
+  <div class="location-grid">
+    {% for loc in top_locations %}
+      <a class="location-card" href="{{ url_for('pages.index', q=loc.loc, field='ubicacion') }}">
+        <span class="location-name">📍 {{ loc.loc }}</span>
+        <span class="location-count">{{ loc.n }}</span>
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="muted">No hay ubicaciones registradas.</p>
+{% endif %}
+{% endblock %}

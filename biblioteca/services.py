@@ -378,3 +378,92 @@ def guess_title_from_ocr_text(text):
     if not candidates:
         return None
     return max(candidates, key=len)
+
+
+def get_dashboard_stats(db):
+    total = db.execute("SELECT COUNT(*) FROM books").fetchone()[0]
+    loaned = db.execute(
+        "SELECT COUNT(DISTINCT book_id) FROM loans WHERE returned_at IS NULL"
+    ).fetchone()[0]
+    reading = db.execute(
+        "SELECT COUNT(DISTINCT book_id) FROM reading_entries WHERE finished_at IS NULL"
+    ).fetchone()[0]
+    finished = db.execute(
+        "SELECT COUNT(DISTINCT book_id) FROM reading_entries WHERE finished_at IS NOT NULL"
+    ).fetchone()[0]
+    pending = db.execute(
+        """
+        SELECT COUNT(*) FROM books b
+        WHERE NOT EXISTS (SELECT 1 FROM reading_entries r WHERE r.book_id = b.id)
+        """
+    ).fetchone()[0]
+    return {
+        "total": total,
+        "available": max(0, total - loaned),
+        "loaned": loaned,
+        "reading": reading,
+        "finished": finished,
+        "pending": pending,
+    }
+
+
+def get_active_loans(db):
+    return db.execute(
+        """
+        SELECT l.*, b.title, b.cover_url, b.id AS book_id
+        FROM loans l
+        JOIN books b ON b.id = l.book_id
+        WHERE l.returned_at IS NULL
+        ORDER BY l.loaned_at DESC
+        """
+    ).fetchall()
+
+
+def get_loan_history(db):
+    return db.execute(
+        """
+        SELECT l.*, b.title, b.cover_url, b.id AS book_id
+        FROM loans l
+        JOIN books b ON b.id = l.book_id
+        WHERE l.returned_at IS NOT NULL
+        ORDER BY l.returned_at DESC
+        """
+    ).fetchall()
+
+
+def get_active_readings(db):
+    return db.execute(
+        """
+        SELECT r.*, b.title, b.cover_url, b.id AS book_id
+        FROM reading_entries r
+        JOIN books b ON b.id = r.book_id
+        WHERE r.finished_at IS NULL
+        ORDER BY r.started_at DESC
+        """
+    ).fetchall()
+
+
+def get_finished_readings(db):
+    return db.execute(
+        """
+        SELECT r.*, b.title, b.cover_url, b.id AS book_id
+        FROM reading_entries r
+        JOIN books b ON b.id = r.book_id
+        WHERE r.finished_at IS NOT NULL
+        ORDER BY r.finished_at DESC
+        """
+    ).fetchall()
+
+
+def get_top_locations(db, limit=8):
+    return db.execute(
+        """
+        SELECT TRIM(location) AS loc, COUNT(*) AS n
+        FROM books
+        WHERE TRIM(COALESCE(location, '')) != ''
+        GROUP BY loc
+        ORDER BY n DESC, loc COLLATE NOCASE
+        LIMIT ?
+        """,
+        (limit,),
+    ).fetchall()

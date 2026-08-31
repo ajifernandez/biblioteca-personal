@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h1>Lecturas</h1>
+  <p>Tus lecturas activas e histórico.</p>
+</div>
+
+<h2 style="font-size:1.1rem; font-weight:700; margin:0 0 0.75rem;">Leyendo ahora</h2>
+{% if not current %}
+  <div class="empty-state">
+    <div class="icon">📖</div>
+    <p>No estás leyendo ningún libro ahora.</p>
+  </div>
+{% else %}
+  <div class="section-list">
+    {% for r in current %}
+      <a class="section-card" href="{{ url_for('books.book_detail', book_id=r.book_id) }}">
+        {% if r.cover_url %}
+          <img class="section-cover" src="{{ r.cover_url }}" alt="">
+        {% else %}
+          <div class="section-cover-fallback">📕</div>
+        {% endif %}
+        <div class="section-meta">
+          <p class="section-title">{{ r.title }}</p>
+          <p class="section-sub">Empezado el {{ r.started_at }}</p>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<h2 style="font-size:1.1rem; font-weight:700; margin:1.5rem 0 0.75rem;">Terminadas</h2>
+{% if not finished %}
+  <div class="empty-state">
+    <div class="icon">📖</div>
+    <p>Todavía no has terminado ningún libro.</p>
+  </div>
+{% else %}
+  <div class="timeline">
+    {% for r in finished %}
+      <div class="timeline-entry">
+        <div class="title">{{ r.title }}</div>
+        <div class="dates">{{ r.started_at }} → {{ r.finished_at }}</div>
+        {% if r.rating %}<div class="stars">{{ '★' * r.rating }}{{ '☆' * (5 - r.rating) }}</div>{% endif %}
+        {% if r.notes %}<div class="notes">{{ r.notes }}</div>{% endif %}
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

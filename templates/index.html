@@ -5,6 +5,33 @@
   <p id="page-subtitle">Busca por título, ISBN, autor, ubicación o persona que tiene un préstamo.</p>
 </div>
 
+<div class="dashboard-grid" aria-label="Resumen de la biblioteca">
+  <a class="stat-card" href="{{ url_for('pages.index') }}">
+    <span class="stat-value">{{ stats.total }}</span>
+    <span class="stat-label">Libros</span>
+  </a>
+  <a class="stat-card" href="{{ url_for('pages.index') }}">
+    <span class="stat-value">{{ stats.available }}</span>
+    <span class="stat-label">Disponibles</span>
+  </a>
+  <a class="stat-card" href="{{ url_for('pages.loans') }}">
+    <span class="stat-value">{{ stats.loaned }}</span>
+    <span class="stat-label">Prestados</span>
+  </a>
+  <a class="stat-card" href="{{ url_for('pages.readings') }}">
+    <span class="stat-value">{{ stats.reading }}</span>
+    <span class="stat-label">Leyendo</span>
+  </a>
+  <a class="stat-card" href="{{ url_for('pages.readings') }}">
+    <span class="stat-value">{{ stats.finished }}</span>
+    <span class="stat-label">Terminados</span>
+  </a>
+  <a class="stat-card" href="{{ url_for('pages.readings') }}">
+    <span class="stat-value">{{ stats.pending }}</span>
+    <span class="stat-label">Por leer</span>
+  </a>
+</div>
+
 <div class="toolbar-row">
   <form class="search-card" hx-get="{{ url_for('pages.search') }}" hx-target="#results" hx-trigger="input changed delay:300ms from:input, change from:select" hx-vals="js:{view: currentView()}">
     <span class="search-icon">🔍</span>

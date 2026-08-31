@@ -1,13 +1,23 @@
 from flask import Blueprint, render_template, request
 
-from ..services import find_books
+from ..db import get_db
+from ..services import (
+    find_books,
+    get_active_loans,
+    get_active_readings,
+    get_dashboard_stats,
+    get_finished_readings,
+    get_loan_history,
+    get_top_locations,
+)
 
 pages = Blueprint("pages", __name__)
 
 
 @pages.route("/", endpoint="index")
 def index():
-    return render_template("index.html")
+    db = get_db()
+    return render_template("index.html", stats=get_dashboard_stats(db))
 
 
 @pages.route("/search", endpoint="search")
@@ -49,3 +59,33 @@ def locations():
 @pages.route("/scan", endpoint="scan")
 def scan():
     return render_template("scan.html")
+
+
+@pages.route("/lecturas", endpoint="readings")
+def readings():
+    db = get_db()
+    return render_template(
+        "readings.html",
+        current=get_active_readings(db),
+        finished=get_finished_readings(db),
+    )
+
+
+@pages.route("/prestamos", endpoint="loans")
+def loans():
+    db = get_db()
+    return render_template(
+        "loans.html",
+        active=get_active_loans(db),
+        history=get_loan_history(db),
+    )
+
+
+@pages.route("/estadisticas", endpoint="stats")
+def stats():
+    db = get_db()
+    return render_template(
+        "stats.html",
+        stats=get_dashboard_stats(db),
+        top_locations=get_top_locations(db),
+    )

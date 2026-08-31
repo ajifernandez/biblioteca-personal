@@ -20,11 +20,17 @@
 </head>
 <body>
   <div class="topnav">
-    <a class="brand" href="{{ url_for('pages.index') }}"><span class="logo-emoji">📚</span> Mi Biblioteca</a>
+    <a class="brand" href="{{ url_for('pages.index') }}"><span class="logo-emoji">📚</span> <span class="btn-label">Mi Biblioteca</span></a>
+    <nav class="topnav-links" aria-label="Navegación principal">
+      <a class="nav-link {{ 'active' if request.endpoint == 'pages.index' }}" href="{{ url_for('pages.index') }}"><span>📚</span><span class="btn-label"> Biblioteca</span></a>
+      <a class="nav-link {{ 'active' if request.endpoint == 'pages.readings' }}" href="{{ url_for('pages.readings') }}"><span>📖</span><span class="btn-label"> Lecturas</span></a>
+      <a class="nav-link {{ 'active' if request.endpoint == 'pages.loans' }}" href="{{ url_for('pages.loans') }}"><span>🤝</span><span class="btn-label"> Préstamos</span></a>
+      <a class="nav-link {{ 'active' if request.endpoint == 'pages.stats' }}" href="{{ url_for('pages.stats') }}"><span>📊</span><span class="btn-label"> Estadísticas</span></a>
+      <a class="nav-link {{ 'active' if request.endpoint == 'pages.locations' }}" href="{{ url_for('pages.locations') }}"><span>📍</span><span class="btn-label"> Ubicaciones</span></a>
+    </nav>
     <div class="topnav-actions">
-      <a class="btn btn-ghost" id="nav-locations-btn" href="{{ url_for('pages.locations') }}" aria-label="Ubicaciones">📍<span class="btn-label"> Ubicaciones</span></a>
-      <a class="btn btn-ghost" id="nav-csv-btn" href="{{ url_for('pages.csv_page') }}" aria-label="Exportar / Importar">⇅<span class="btn-label"> CSV</span></a>
-      <a class="btn btn-primary" id="nav-add-btn" href="{{ url_for('pages.scan') }}" aria-label="Añadir libro">＋<span class="btn-label"> Añadir libro</span></a>
+      <a class="btn btn-primary" id="nav-add-btn" href="{{ url_for('pages.scan') }}" aria-label="Añadir libro">＋<span class="btn-label"> Añadir</span></a>
+      <a class="btn btn-ghost" id="nav-csv-btn" href="{{ url_for('pages.csv_page') }}" aria-label="CSV">⇅<span class="btn-label"> CSV</span></a>
       <button type="button" class="btn btn-ghost" id="theme-toggle-btn" aria-label="Cambiar tema">🖥️<span class="btn-label"> Tema</span></button>
     </div>
   </div>

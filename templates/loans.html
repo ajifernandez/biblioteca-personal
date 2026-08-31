@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h1>Préstamos</h1>
+  <p>Libros que has prestado y su historial.</p>
+</div>
+
+<h2 style="font-size:1.1rem; font-weight:700; margin:0 0 0.75rem;">Préstamos activos</h2>
+{% if not active %}
+  <div class="empty-state">
+    <div class="icon">🤝</div>
+    <p>No hay préstamos activos.</p>
+  </div>
+{% else %}
+  <div class="section-list">
+    {% for loan in active %}
+      <a class="section-card" href="{{ url_for('books.book_detail', book_id=loan.book_id) }}">
+        {% if loan.cover_url %}
+          <img class="section-cover" src="{{ loan.cover_url }}" alt="">
+        {% else %}
+          <div class="section-cover-fallback">📕</div>
+        {% endif %}
+        <div class="section-meta">
+          <p class="section-title">{{ loan.title }}</p>
+          <p class="section-sub">Prestado a <strong>{{ loan.borrower_name }}</strong> el {{ loan.loaned_at }}</p>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<h2 style="font-size:1.1rem; font-weight:700; margin:1.5rem 0 0.75rem;">Historial</h2>
+{% if not history %}
+  <div class="empty-state">
+    <div class="icon">🤝</div>
+    <p>Sin préstamos anteriores.</p>
+  </div>
+{% else %}
+  <div class="timeline">
+    {% for loan in history %}
+      <div class="timeline-entry">
+        <div class="title">{{ loan.title }}</div>
+        <div class="dates">{{ loan.loaned_at }} → {{ loan.returned_at }} · {{ loan.borrower_name }}</div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}
