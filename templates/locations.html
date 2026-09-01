@@ -30,15 +30,19 @@
   <div class="location-grid">
     {% for loc in locations %}
       <div class="location-card">
-        <a class="location-name" href="{{ url_for('pages.index', q=loc.name, field='ubicacion') }}">📍 {{ loc.name }}</a>
-        <span class="location-count">{{ loc.n }}</span>
-        <form method="post" action="{{ url_for('pages.edit_location', location_id=loc.id) }}" class="field full" style="margin: 0.5rem 0 0;">
-          <input type="text" name="name" value="{{ loc.name }}" required>
-          <button type="submit" class="btn btn-ghost" style="margin-top:0.5rem;">Renombrar</button>
-        </form>
-        <form method="post" action="{{ url_for('pages.delete_location', location_id=loc.id) }}" style="margin-top:0.5rem;" onsubmit="return confirm('¿Eliminar esta ubicación?');">
-          <button type="submit" class="btn btn-danger" {% if loc.n > 0 %}disabled{% endif %}>Eliminar</button>
-        </form>
+        <div class="location-row">
+          <a class="location-name" href="{{ url_for('pages.index', q=loc.name, field='ubicacion') }}">📍 {{ loc.name }}</a>
+          <span class="location-count">{{ loc.n }}</span>
+        </div>
+        <div class="location-actions">
+          <form method="post" action="{{ url_for('pages.edit_location', location_id=loc.id) }}" class="rename-form">
+            <input type="text" name="name" value="{{ loc.name }}" required aria-label="Nuevo nombre" class="field-input">
+            <button type="submit" class="btn btn-ghost">Renombrar</button>
+          </form>
+          <form method="post" action="{{ url_for('pages.delete_location', location_id=loc.id) }}" class="delete-form" onsubmit="return confirm('¿Eliminar esta ubicación?');">
+            <button type="submit" class="btn btn-danger" {% if loc.n > 0 %}disabled{% endif %}>Eliminar</button>
+          </form>
+        </div>
       </div>
     {% endfor %}
   </div>
